@@ -663,6 +663,14 @@ gst_raw_parse_sink_event (GstPad * pad, GstEvent * event)
 
         ret = gst_pad_push_event (rp->srcpad, event);
       }
+
+      /* set n_frames calculated based on beginning time */
+      if (rate >= 0)
+        gst_raw_parse_convert (rp, GST_FORMAT_TIME, start, GST_FORMAT_DEFAULT,
+            (gint64 *) & rp->n_frames);
+      else
+        gst_raw_parse_convert (rp, GST_FORMAT_TIME, stop, GST_FORMAT_DEFAULT,
+            (gint64 *) & rp->n_frames);
       break;
     }
     default:
