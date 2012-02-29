@@ -697,14 +697,14 @@ gst_raw_parse_handle_seek_push (GstRawParse * rp, GstEvent * event)
   gst_event_parse_seek (event, &rate, &format, &flags, &start_type, &start,
       &stop_type, &stop);
 
-  /* can't seek backwards yet */
-  if (rate <= 0.0)
-    goto wrong_rate;
-
   /* First try if upstream handles the seek */
   ret = gst_pad_push_event (rp->sinkpad, event);
   if (ret)
     return ret;
+
+  /* can't seek backwards yet */
+  if (rate <= 0.0)
+    goto wrong_rate;
 
   /* Otherwise convert to bytes and push upstream */
   if (format == GST_FORMAT_TIME || format == GST_FORMAT_DEFAULT) {
