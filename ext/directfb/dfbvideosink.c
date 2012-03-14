@@ -1227,6 +1227,20 @@ gst_dfbvideosink_getcaps (GstBaseSink * bsink)
         accelerated = !accelerated;
       } while (accelerated == FALSE);
     }
+#if defined(HAVE_SHVIO)
+    /* append color formats which can be converted by libshvio */
+    if (dfbvideosink->vio) {
+      gst_caps_append (caps,
+          gst_dfbvideosink_get_caps_from_format (DSPF_RGB16));
+      gst_caps_append (caps,
+          gst_dfbvideosink_get_caps_from_format (DSPF_RGB24));
+      gst_caps_append (caps,
+          gst_dfbvideosink_get_caps_from_format (DSPF_RGB32));
+      gst_caps_append (caps, gst_dfbvideosink_get_caps_from_format (DSPF_UYVY));
+      gst_caps_append (caps, gst_dfbvideosink_get_caps_from_format (DSPF_YV12));
+      gst_caps_append (caps, gst_dfbvideosink_get_caps_from_format (DSPF_ARGB));
+    }
+#endif /* defined(HAVE_SHVIO) */
   }
 
   for (i = 0; i < gst_caps_get_size (caps); i++) {
