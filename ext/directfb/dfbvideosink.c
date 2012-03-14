@@ -780,6 +780,14 @@ gst_dfbvideosink_setup (GstDfbVideoSink * dfbvideosink)
         gst_dfbvideosink_get_format_name (dfbvideosink->pixel_format));
   }
 
+#if defined(HAVE_SHVIO)
+  GST_DEBUG_OBJECT (dfbvideosink, "initializing libshvio");
+  dfbvideosink->vio = shvio_open_named ("VIO");
+  if (dfbvideosink->vio == NULL)
+    GST_ELEMENT_ERROR (dfbvideosink, RESOURCE, OPEN_WRITE,
+        (NULL), ("Failed initializing libshvio"));
+#endif /* defined(HAVE_SHVIO) */
+
   dfbvideosink->setup = TRUE;
 
 beach:
@@ -847,6 +855,13 @@ gst_dfbvideosink_cleanup (GstDfbVideoSink * dfbvideosink)
     dfbvideosink->dfb->Release (dfbvideosink->dfb);
     dfbvideosink->dfb = NULL;
   }
+#if defined(HAVE_SHVIO)
+  GST_DEBUG_OBJECT (dfbvideosink, "closing libshvio");
+  if (dfbvideosink->vio) {
+    shvio_close (dfbvideosink->vio);
+    dfbvideosink->vio = NULL;
+  }
+#endif /* defined(HAVE_SHVIO) */
 
   dfbvideosink->setup = FALSE;
 }
@@ -1395,12 +1410,15 @@ gst_dfbvideosink_setcaps (GstBaseSink * bsink, GstCaps * caps)
       }
     }
   }
-
+#if defined(HAVE_SHVIO)
+  /* accept any color format different from destination's one. */
+#else
   if (pixel_format != dfbvideosink->pixel_format) {
     GST_WARNING_OBJECT (dfbvideosink, "setcaps sent us a different pixel "
         "format %s", gst_dfbvideosink_get_format_name (pixel_format));
     goto beach;
   }
+#endif
 
   dfbvideosink->video_width = video_width;
   dfbvideosink->video_height = video_height;
@@ -1507,6 +1525,59 @@ gst_dfbvideosink_get_times (GstBaseSink * bsink, GstBuffer * buf,
   }
 }
 
+#if defined(HAVE_SHVIO)
+static inline gint
+byte2pixel (gint bytes, DFBSurfacePixelFormat dfbfmt)
+{
+  switch (dfbfmt) {
+    case DSPF_NV12:
+    case DSPF_NV16:
+    case DSPF_YV12:
+      return bytes;
+    case DSPF_UYVY:
+    case DSPF_RGB16:
+      return bytes / 2;
+    case DSPF_RGB24:
+      return bytes / 3;
+    case DSPF_RGB32:
+    case DSPF_ARGB:
+      return bytes / 4;
+    default:
+      break;
+  }
+
+  return -1;
+}
+
+static inline ren_vid_format_t
+dfb2shvio_format (DFBSurfacePixelFormat dfbfmt)
+{
+  switch (dfbfmt) {
+    case DSPF_NV12:
+      return REN_NV12;
+    case DSPF_NV16:
+      return REN_NV16;
+    case DSPF_YV12:
+      return REN_YV12;
+    case DSPF_UYVY:
+      return REN_UYVY;
+    case DSPF_RGB16:
+      return REN_RGB565;
+    case DSPF_RGB24:
+      return REN_RGB24;
+    case DSPF_RGB32:
+      return REN_RGB32;
+    case DSPF_ARGB:
+      return REN_ARGB32;
+    default:
+      break;
+  }
+
+  return REN_UNKNOWN;
+}
+
+#endif /* defined(HAVE_SHVIO) */
+
 static GstFlowReturn
 gst_dfbvideosink_show_frame (GstBaseSink * bsink, GstBuffer * buf)
 {
@@ -1548,6 +1619,11 @@ gst_dfbvideosink_show_frame (GstBaseSink * bsink, GstBuffer * buf)
     guint8 *data;
     gint dest_pitch, src_pitch, line;
     GstStructure *structure;
+#if defined(HAVE_SHVIO)
+    DFBSurfacePixelFormat src_format, dst_format;
+    struct ren_vid_surface viosurface[2];
+    int ret;
+#endif
 
     /* As we are not blitting no acceleration is possible. If the surface is
      * too small we do clipping, if it's too big we center. Theoretically as 
@@ -1573,6 +1649,22 @@ gst_dfbvideosink_show_frame (GstBaseSink * bsink, GstBuffer * buf)
       src.w = dfbvideosink->video_width;
       src.h = dfbvideosink->video_height;
     }
+#if defined(HAVE_SHVIO)
+    res = surface->GetPixelFormat (surface, &dst_format);
+    if (res != DFB_OK) {
+      GST_WARNING_OBJECT (dfbvideosink,
+          "failed getting pixel format from surface");
+      ret = GST_FLOW_UNEXPECTED;
+      goto beach;
+    }
+    src_format = gst_dfbvideosink_get_format_from_caps (GST_BUFFER_CAPS (buf));
+    if (src_format == DSPF_UNKNOWN) {
+      GST_WARNING_OBJECT (dfbvideosink,
+          "failed getting pixel format from caps");
+      ret = GST_FLOW_UNEXPECTED;
+      goto beach;
+    }
+#endif
     res = surface->GetSize (surface, &dst.w, &dst.h);
 
     /* Center / Clip */
@@ -1603,6 +1695,68 @@ gst_dfbvideosink_show_frame (GstBaseSink * bsink, GstBuffer * buf)
     /* Source video rowbytes */
     src_pitch = GST_BUFFER_SIZE (buf) / src.h;
 
+#if defined(HAVE_SHVIO)
+    if (dfbvideosink->vio == NULL)
+      goto swrender;
+
+    /* Set up source viosurface */
+    viosurface[0].w = src.w;
+    viosurface[0].h = src.h;
+    viosurface[0].pitch = byte2pixel (src_pitch, src_format);
+    if (viosurface[0].pitch < 0) {
+      GST_WARNING_OBJECT (dfbvideosink, "Pixel format %s unsupported",
+          gst_dfbvideosink_get_format_name (src_format));
+      goto swrender;
+    }
+    viosurface[0].bpitchy = 0;
+    viosurface[0].bpitchc = 0;
+    viosurface[0].bpitcha = 0;
+    viosurface[0].format = dfb2shvio_format (src_format);
+    if (viosurface[0].format == REN_UNKNOWN) {
+      GST_WARNING_OBJECT (dfbvideosink, "Pixel format %s unsupported",
+          gst_dfbvideosink_get_format_name (src_format));
+      goto swrender;
+    }
+    viosurface[0].py = GST_BUFFER_DATA (buf);
+    if (is_ycbcr_planar (viosurface[0].format))
+      viosurface[0].pc = viosurface[0].py + src_pitch * src.h;
+    else
+      viosurface[1].pc = 0;
+    viosurface[0].pa = 0;
+
+    /* Set up destination viosurface */
+    viosurface[1].w = result.w;
+    viosurface[1].h = result.h;
+    viosurface[1].pitch = byte2pixel (dest_pitch, dst_format);
+    if (viosurface[1].pitch < 0) {
+      GST_WARNING_OBJECT (dfbvideosink, "Pixel format %s unsupported",
+          gst_dfbvideosink_get_format_name (dst_format));
+      goto swrender;
+    }
+    viosurface[1].bpitchy = 0;
+    viosurface[1].bpitchc = 0;
+    viosurface[1].bpitcha = 0;
+    viosurface[1].format = dfb2shvio_format (dst_format);
+    if (viosurface[1].format == REN_UNKNOWN) {
+      GST_WARNING_OBJECT (dfbvideosink, "Pixel format %s unsupported",
+          gst_dfbvideosink_get_format_name (dst_format));
+      goto swrender;
+    }
+    viosurface[1].py = data;
+    if (is_ycbcr_planar (viosurface[1].format))
+      viosurface[1].pc = viosurface[1].py + dest_pitch * result.h;
+    else
+      viosurface[1].pc = 0;
+    viosurface[1].pa = 0;
+
+    /* Do stretch-blit/blit with color conversion */
+    ret = shvio_resize (dfbvideosink->vio, &viosurface[0], &viosurface[1]);
+    if (ret < 0)
+      GST_WARNING_OBJECT (dfbvideosink, "failed bliting with shvio_resize()");
+    else
+      result.h = 0;             /* nullify the following memcpy render */
+  swrender:
+#else
     /* Write each line respecting subsurface pitch */
     for (line = 0; line < result.h; line++) {
       /* We do clipping */
@@ -1610,6 +1764,7 @@ gst_dfbvideosink_show_frame (GstBaseSink * bsink, GstBuffer * buf)
           MIN (src_pitch, dest_pitch));
       data += dest_pitch;
     }
+#endif /* defined(HAVE_SHVIO) */
 
     res = dest->Unlock (dest);
 

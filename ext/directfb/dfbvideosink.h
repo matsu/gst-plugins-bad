@@ -24,6 +24,11 @@
 
 #include <directfb.h>
 
+#if defined(HAVE_SHVIO)
+#include <uiomux/uiomux.h>
+#include <shvio/shvio.h>
+#endif
+
 G_BEGIN_DECLS
 
 #define GST_TYPE_DFBVIDEOSINK              (gst_dfbvideosink_get_type())
@@ -116,6 +121,10 @@ struct _GstDfbVideoSink {
   
   /* object-set pixel aspect ratio */
   GValue *par;
+
+#if defined(HAVE_SHVIO)
+  SHVIO *vio;
+#endif
 };
 
 struct _GstDfbVideoSinkClass {

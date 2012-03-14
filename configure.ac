@@ -811,6 +811,15 @@ AG_GST_CHECK_FEATURE(DIRECTFB, [directfb], dfbvideosink , [
   PKG_CHECK_MODULES(DIRECTFB, directfb >= 0.9.24, HAVE_DIRECTFB="yes", [
     HAVE_DIRECTFB="no"
   ])
+  PKG_CHECK_MODULES(UIOMUX, uiomux >= 1.6.2, HAVE_UIOMUX="yes", [
+    HAVE_UIOMUX="no"
+  ])
+  PKG_CHECK_MODULES(SHVIO, shvio >= 1.7.2, HAVE_SHVIO="yes", [
+    HAVE_SHVIO="no"
+  ])
+  if test $HAVE_SHVIO = "yes"; then
+    AC_DEFINE(HAVE_SHVIO, 1, [Define if we have libshvio])
+  fi
 ])
 
 dnl **** Dirac ****
