@@ -1726,6 +1726,8 @@ gst_dfbvideosink_show_frame (GstBaseSink * bsink, GstBuffer * buf)
     viosurface[0].bpitchc = 0;
     viosurface[0].bpitcha = 0;
     viosurface[0].format = dfb2shvio_format (src_format);
+    if (viosurface[0].format == REN_ARGB32)
+      viosurface[0].format = REN_XRGB32;        /* WORKAROUND: ignore the alpha channel */
     if (viosurface[0].format == REN_UNKNOWN) {
       GST_WARNING_OBJECT (dfbvideosink, "Pixel format %s unsupported",
           gst_dfbvideosink_get_format_name (src_format));
