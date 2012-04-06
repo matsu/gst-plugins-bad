@@ -1737,7 +1737,7 @@ gst_dfbvideosink_show_frame (GstBaseSink * bsink, GstBuffer * buf)
     if (is_ycbcr_planar (viosurface[0].format))
       viosurface[0].pc = viosurface[0].py + src_pitch * src.h;
     else
-      viosurface[1].pc = 0;
+      viosurface[0].pc = 0;
     viosurface[0].pa = 0;
 
     /* Set up destination viosurface */
