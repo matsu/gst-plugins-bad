@@ -1586,7 +1586,9 @@ dfb2shvio_format (DFBSurfacePixelFormat dfbfmt)
     case DSPF_RGB24:
       return REN_RGB24;
     case DSPF_RGB32:
-      return REN_RGB32;
+      /* compensate for an interpretation difference of colorspace definitions
+         between directfb and libshvio */
+      return REN_XRGB32;
     case DSPF_ARGB:
       return REN_ARGB32;
     default:
