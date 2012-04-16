@@ -1220,13 +1220,13 @@ gst_dfbvideosink_getcaps (GstBaseSink * bsink)
       if (dfbvideosink->vio) {
         caps = gst_caps_new_empty ();
         gst_caps_append (caps,
-            gst_dfbvideosink_get_caps_from_format (DSPF_RGB16));
-        gst_caps_append (caps,
-            gst_dfbvideosink_get_caps_from_format (DSPF_RGB24));
-        gst_caps_append (caps,
             gst_dfbvideosink_get_caps_from_format (DSPF_RGB32));
         gst_caps_append (caps,
             gst_dfbvideosink_get_caps_from_format (DSPF_UYVY));
+        gst_caps_append (caps,
+            gst_dfbvideosink_get_caps_from_format (DSPF_RGB16));
+        gst_caps_append (caps,
+            gst_dfbvideosink_get_caps_from_format (DSPF_RGB24));
         gst_caps_append (caps,
             gst_dfbvideosink_get_caps_from_format (DSPF_YV12));
         gst_caps_append (caps,
@@ -1251,6 +1251,15 @@ gst_dfbvideosink_getcaps (GstBaseSink * bsink)
        * DSPF_UYVY
        * DSPF_YV12
        */
+      if (dfbvideosink->vio) {
+        gst_caps_append (caps,
+            gst_dfbvideosink_get_caps_from_format (DSPF_RGB32));
+      }
+      if (gst_dfbvideosink_can_blit_from_format (dfbvideosink, DSPF_UYVY,
+              accelerated) || dfbvideosink->vio) {
+        gst_caps_append (caps,
+            gst_dfbvideosink_get_caps_from_format (DSPF_UYVY));
+      }
       if (gst_dfbvideosink_can_blit_from_format (dfbvideosink, DSPF_RGB16,
               accelerated) || dfbvideosink->vio) {
         gst_caps_append (caps,
@@ -1261,10 +1270,6 @@ gst_dfbvideosink_getcaps (GstBaseSink * bsink)
         gst_caps_append (caps,
             gst_dfbvideosink_get_caps_from_format (DSPF_RGB24));
       }
-      if (dfbvideosink->vio) {
-        gst_caps_append (caps,
-            gst_dfbvideosink_get_caps_from_format (DSPF_RGB32));
-      }
       if (gst_dfbvideosink_can_blit_from_format (dfbvideosink, DSPF_ARGB,
               accelerated) || dfbvideosink->vio) {
         gst_caps_append (caps,
@@ -1274,11 +1279,6 @@ gst_dfbvideosink_getcaps (GstBaseSink * bsink)
               accelerated)) {
         gst_caps_append (caps,
             gst_dfbvideosink_get_caps_from_format (DSPF_YUY2));
-      }
-      if (gst_dfbvideosink_can_blit_from_format (dfbvideosink, DSPF_UYVY,
-              accelerated) || dfbvideosink->vio) {
-        gst_caps_append (caps,
-            gst_dfbvideosink_get_caps_from_format (DSPF_UYVY));
       }
       if (gst_dfbvideosink_can_blit_from_format (dfbvideosink, DSPF_I420,
               accelerated)) {
