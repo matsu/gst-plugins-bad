@@ -28,15 +28,18 @@ usage (char *cmd)
   printf ("  -w		w of sub surface rectangle\n");
   printf ("  -h		h of sub surface rectangle\n");
   printf ("  -u		specify uyvy as v4l2src output pixelformat\n");
+  printf ("  -l		specify the number of display layer\n");
   printf ("  -o		DirectFB or GStreamer option\n");
 }
 
 int
 main (int argc, char *argv[])
 {
-  DFBSurfaceDescription dsc;
   GstElement *pipeline, *src, *sink;
   int screen_width, screen_height;
+  IDirectFBDisplayLayer *layer;
+  DFBDisplayLayerID layer_id;
+  DFBDisplayLayerConfig config;
   IDirectFBSurface *sub_surface;
   DFBRectangle rect;
   int opt;
@@ -57,9 +60,10 @@ main (int argc, char *argv[])
   tmp_argv[1] = strdup ("--dfb:quiet");
 
   memset (&rect, 0, sizeof (rect));
+  layer_id = 0;
 
   opterr = 0;
-  while ((opt = getopt (argc, argv, "x:y:w:h:uo:")) != -1) {
+  while ((opt = getopt (argc, argv, "x:y:w:h:ul:o:")) != -1) {
     switch (opt) {
       case 'x':
         rect.x = atoi (optarg);
@@ -75,6 +79,9 @@ main (int argc, char *argv[])
         break;
       case 'u':
         is_uyvy = TRUE;
+        break;
+      case 'l':
+        layer_id = atoi (optarg);
         break;
       case 'o':
         tmp_argv[tmp_argc++] = strdup (optarg);
@@ -92,13 +99,16 @@ main (int argc, char *argv[])
 
   /* Creates DirectFB main context and set it to fullscreen layout */
   DFBCHECK (DirectFBCreate (&dfb));
-  DFBCHECK (dfb->SetCooperativeLevel (dfb, DFSCL_FULLSCREEN));
+  DFBCHECK (dfb->GetDisplayLayer (dfb, layer_id, &layer));
+  DFBCHECK (layer->SetCooperativeLevel (layer, DLSCL_EXCLUSIVE));
 
   /* We want a double buffered primary surface */
-  dsc.flags = DSDESC_CAPS;
-  dsc.caps = DSCAPS_PRIMARY | DSCAPS_FLIPPING;
+  config.flags = DLCONF_BUFFERMODE | DLCONF_SURFACE_CAPS;
+  config.buffermode = DLBM_BACKVIDEO;
+  config.surface_caps = DSCAPS_FLIPPING;
 
-  DFBCHECK (dfb->CreateSurface (dfb, &dsc, &primary));
+  DFBCHECK (layer->SetConfiguration (layer, &config));
+  DFBCHECK (layer->GetSurface (layer, &primary));
   DFBCHECK (primary->GetSize (primary, &screen_width, &screen_height));
 
   /* default setting */
