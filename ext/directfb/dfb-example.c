@@ -29,6 +29,8 @@ usage (char *cmd)
   printf ("  -h		h of sub surface rectangle\n");
   printf ("  -u		specify uyvy as v4l2src output pixelformat\n");
   printf ("  -l		specify the number of display layer\n");
+  printf
+      ("  -q		specify the number of buffers to be enqueud in the v4l2 driver\n");
   printf ("  -o		DirectFB or GStreamer option\n");
 }
 
@@ -48,6 +50,7 @@ main (int argc, char *argv[])
   int i;
   GstCaps *caps;
   gboolean is_uyvy = FALSE;
+  guint32 queue_size;
 
   if ((argc == 2) && (strcmp (argv[1], "--help") == 0)) {
     usage (argv[0]);
@@ -61,9 +64,10 @@ main (int argc, char *argv[])
 
   memset (&rect, 0, sizeof (rect));
   layer_id = 0;
+  queue_size = 4;
 
   opterr = 0;
-  while ((opt = getopt (argc, argv, "x:y:w:h:ul:o:")) != -1) {
+  while ((opt = getopt (argc, argv, "x:y:w:h:ul:q:o:")) != -1) {
     switch (opt) {
       case 'x':
         rect.x = atoi (optarg);
@@ -82,6 +86,9 @@ main (int argc, char *argv[])
         break;
       case 'l':
         layer_id = atoi (optarg);
+        break;
+      case 'q':
+        queue_size = atoi (optarg);
         break;
       case 'o':
         tmp_argv[tmp_argc++] = strdup (optarg);
@@ -131,7 +138,7 @@ main (int argc, char *argv[])
   g_assert (sink);
 
   /* setting zero copy for v4l2src */
-  g_object_set (src, "always-copy", FALSE, "queue-size", 4, NULL);
+  g_object_set (src, "always-copy", FALSE, "queue-size", queue_size, NULL);
 
   /* That's the interesting part, giving the primary surface to dfbvideosink */
   g_object_set (sink, "surface", sub_surface, NULL);
