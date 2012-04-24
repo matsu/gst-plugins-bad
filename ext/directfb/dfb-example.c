@@ -69,7 +69,7 @@ main (int argc, char *argv[])
 
   memset (&rect, 0, sizeof (rect));
   layer_id = 0;
-  queue_size = 4;
+  queue_size = 5;
   top = bottom = left = right = 0;
 
   opterr = 0;
