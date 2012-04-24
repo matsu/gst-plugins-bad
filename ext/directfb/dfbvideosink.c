@@ -1682,7 +1682,11 @@ gst_dfbvideosink_show_frame (GstBaseSink * bsink, GstBuffer * buf)
     res = surface->GetSize (surface, &dst.w, &dst.h);
 
     /* Center / Clip */
+#if defined(HAVE_SHVIO)
+    gst_video_sink_center_rect (src, dst, &result, TRUE);
+#else
     gst_video_sink_center_rect (src, dst, &result, FALSE);
+#endif
 
     res =
         surface->GetSubSurface (surface, (DFBRectangle *) (void *) &result,
