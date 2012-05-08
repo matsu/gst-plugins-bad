@@ -106,6 +106,7 @@ struct _GstDfbVideoSink {
   DFBSurfacePixelFormat pixel_format;
   
   gboolean hw_scaling;
+  gboolean keep_ar;	/* keep image aspect ratio */
   gboolean backbuffer;
   gboolean vsync;
   gboolean setup;

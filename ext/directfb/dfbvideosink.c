@@ -123,7 +123,8 @@ enum
   ARG_HUE,
   ARG_SATURATION,
   ARG_PIXEL_ASPECT_RATIO,
-  ARG_VSYNC
+  ARG_VSYNC,
+  ARG_KEEP_ASPECT_RATIO
 };
 
 static void gst_dfbvideosink_bufferpool_clear (GstDfbVideoSink * dfbvideosink);
@@ -1592,6 +1593,20 @@ dfb2shvio_format (DFBSurfacePixelFormat dfbfmt)
 
 #endif /* defined(HAVE_SHVIO) */
 
+/* wrap gst_video_sink_center_rect() and control image aspect ratio in scaling */
+static void
+gst_dfbvideosink_center_rect (GstVideoRectangle src, GstVideoRectangle dst,
+    GstVideoRectangle * result, gboolean scaling, gboolean keep_aspect_ratio)
+{
+  if (scaling && !keep_aspect_ratio) {
+    result->w = dst.w;
+    result->h = dst.h;
+    result->x = result->y = 0;
+  } else {
+    gst_video_sink_center_rect (src, dst, result, scaling);
+  }
+}
+
 static GstFlowReturn
 gst_dfbvideosink_show_frame (GstBaseSink * bsink, GstBuffer * buf)
 {
@@ -1683,7 +1698,8 @@ gst_dfbvideosink_show_frame (GstBaseSink * bsink, GstBuffer * buf)
 
     /* Center / Clip */
 #if defined(HAVE_SHVIO)
-    gst_video_sink_center_rect (src, dst, &result, TRUE);
+    gst_dfbvideosink_center_rect (src, dst, &result, TRUE,
+        dfbvideosink->keep_ar);
 #else
     gst_video_sink_center_rect (src, dst, &result, FALSE);
 #endif
@@ -1815,7 +1831,8 @@ gst_dfbvideosink_show_frame (GstBaseSink * bsink, GstBuffer * buf)
       surface->locked = FALSE;
     }
 
-    gst_video_sink_center_rect (src, dst, &result, dfbvideosink->hw_scaling);
+    gst_dfbvideosink_center_rect (src, dst, &result, dfbvideosink->hw_scaling,
+        dfbvideosink->keep_ar);
 
     /* If we are not using Flip we wait for VSYNC before blit */
     if (!dfbvideosink->backbuffer && dfbvideosink->vsync) {
@@ -1923,7 +1940,8 @@ gst_dfbvideosink_buffer_alloc (GstBaseSink * bsink, guint64 offset, guint size,
       dfbvideosink->out_height = dst.h;
     }
 
-    gst_video_sink_center_rect (src, dst, &result, TRUE);
+    gst_dfbvideosink_center_rect (src, dst, &result, TRUE,
+        dfbvideosink->keep_ar);
 
     if (width != result.w || height != result.h) {
       GstPad *peer = gst_pad_get_peer (GST_VIDEO_SINK_PAD (dfbvideosink));
@@ -2133,7 +2151,8 @@ gst_dfbvideosink_navigation_send_event (GstNavigation * navigation,
   src.h = GST_VIDEO_SINK_HEIGHT (dfbvideosink);
   dst.w = dfbvideosink->out_width;
   dst.h = dfbvideosink->out_height;
-  gst_video_sink_center_rect (src, dst, &result, dfbvideosink->hw_scaling);
+  gst_dfbvideosink_center_rect (src, dst, &result, dfbvideosink->hw_scaling,
+      dfbvideosink->keep_ar);
 
   event = gst_event_new_navigation (structure);
 
@@ -2344,6 +2363,9 @@ gst_dfbvideosink_set_property (GObject * object, guint prop_id,
     case ARG_VSYNC:
       dfbvideosink->vsync = g_value_get_boolean (value);
       break;
+    case ARG_KEEP_ASPECT_RATIO:
+      dfbvideosink->keep_ar = g_value_get_boolean (value);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -2378,6 +2400,9 @@ gst_dfbvideosink_get_property (GObject * object, guint prop_id,
       break;
     case ARG_VSYNC:
       g_value_set_boolean (value, dfbvideosink->vsync);
+      break;
+    case ARG_KEEP_ASPECT_RATIO:
+      g_value_set_boolean (value, dfbvideosink->keep_ar);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -2435,6 +2460,7 @@ gst_dfbvideosink_init (GstDfbVideoSink * dfbvideosink)
   dfbvideosink->pixel_format = DSPF_UNKNOWN;
 
   dfbvideosink->hw_scaling = FALSE;
+  dfbvideosink->keep_ar = TRUE;
   dfbvideosink->backbuffer = FALSE;
   dfbvideosink->vsync = TRUE;
   dfbvideosink->setup = FALSE;
@@ -2504,6 +2530,10 @@ gst_dfbvideosink_class_init (GstDfbVideoSinkClass * klass)
   g_object_class_install_property (gobject_class, ARG_VSYNC,
       g_param_spec_boolean ("vsync", "Vertical synchronisation",
           "Wait for next vertical sync to draw frames", TRUE,
+          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+  g_object_class_install_property (gobject_class, ARG_KEEP_ASPECT_RATIO,
+      g_param_spec_boolean ("keep-aspect-ratio", "Keep Aspect Ratio",
+          "Keep image aspect ratio if it will be scaled", TRUE,
           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   gstelement_class->change_state = gst_dfbvideosink_change_state;
