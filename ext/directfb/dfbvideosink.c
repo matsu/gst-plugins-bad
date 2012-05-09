@@ -2410,6 +2410,32 @@ gst_dfbvideosink_get_property (GObject * object, guint prop_id,
   }
 }
 
+static gboolean
+gst_dfbvideosink_handle_sink_query (GstPad * pad, GstQuery * query)
+{
+  gboolean res = FALSE;
+  GstDfbVideoSink *dfbvideosink;
+  GstQueryType query_type_stride;
+
+  dfbvideosink = GST_DFBVIDEOSINK (gst_pad_get_parent (pad));
+
+  GST_LOG_OBJECT (dfbvideosink, "%s query", GST_QUERY_TYPE_NAME (query));
+
+  query_type_stride = gst_query_type_get_by_nick ("stride-supported");
+  if (query_type_stride == GST_QUERY_TYPE (query)) {
+    GstStructure *structure = gst_query_get_structure (query);
+    gst_structure_set (structure, "stride-supported", G_TYPE_BOOLEAN, FALSE,
+        NULL);
+    res = TRUE;
+  } else {
+    res = gst_pad_query_default (pad, query);
+  }
+
+  gst_object_unref (dfbvideosink);
+
+  return res;
+}
+
 /* =========================================== */
 /*                                             */
 /*              Init & Class init              */
@@ -2440,6 +2466,8 @@ gst_dfbvideosink_finalize (GObject * object)
 static void
 gst_dfbvideosink_init (GstDfbVideoSink * dfbvideosink)
 {
+  GstPad *pad = GST_BASE_SINK_PAD (dfbvideosink);
+
   dfbvideosink->pool_lock = g_mutex_new ();
   dfbvideosink->buffer_pool = NULL;
   dfbvideosink->video_height = dfbvideosink->out_height = 0;
@@ -2473,6 +2501,9 @@ gst_dfbvideosink_init (GstDfbVideoSink * dfbvideosink)
   dfbvideosink->saturation = -1;
 
   dfbvideosink->par = NULL;
+
+  gst_pad_set_query_function (pad,
+      GST_DEBUG_FUNCPTR (gst_dfbvideosink_handle_sink_query));
 }
 
 static void
