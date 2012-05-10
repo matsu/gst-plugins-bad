@@ -1288,6 +1288,10 @@ gst_dfbvideosink_setcaps (GstBaseSink * bsink, GstCaps * caps)
   if (!res) {
     goto beach;
   }
+#if defined(HAVE_SHVIO)
+  if (!gst_structure_get_int (structure, "rowstride", &dfbvideosink->rowstride))
+    GST_LOG_OBJECT (dfbvideosink, "can't get rowstride from caps");
+#endif
 
   dfbvideosink->fps_n = gst_value_get_fraction_numerator (framerate);
   dfbvideosink->fps_d = gst_value_get_fraction_denominator (framerate);
@@ -1736,7 +1740,10 @@ gst_dfbvideosink_show_frame (GstBaseSink * bsink, GstBuffer * buf)
     /* Set up source viosurface */
     viosurface[0].w = src.w;
     viosurface[0].h = src.h;
-    viosurface[0].pitch = byte2pixel (src_pitch, src_format);
+    if (dfbvideosink->rowstride >= 0)
+      viosurface[0].pitch = dfbvideosink->rowstride;
+    else
+      viosurface[0].pitch = byte2pixel (src_pitch, src_format);
     if (viosurface[0].pitch < 0) {
       GST_WARNING_OBJECT (dfbvideosink, "Pixel format %s unsupported",
           gst_dfbvideosink_get_format_name (src_format));
@@ -2424,8 +2431,13 @@ gst_dfbvideosink_handle_sink_query (GstPad * pad, GstQuery * query)
   query_type_stride = gst_query_type_get_by_nick ("stride-supported");
   if (query_type_stride == GST_QUERY_TYPE (query)) {
     GstStructure *structure = gst_query_get_structure (query);
+#if defined(HAVE_SHVIO)
+    gst_structure_set (structure, "stride-supported", G_TYPE_BOOLEAN, TRUE,
+        NULL);
+#else
     gst_structure_set (structure, "stride-supported", G_TYPE_BOOLEAN, FALSE,
         NULL);
+#endif
     res = TRUE;
   } else {
     res = gst_pad_query_default (pad, query);
@@ -2474,6 +2486,9 @@ gst_dfbvideosink_init (GstDfbVideoSink * dfbvideosink)
   dfbvideosink->video_width = dfbvideosink->out_width = 0;
   dfbvideosink->fps_d = 0;
   dfbvideosink->fps_n = 0;
+#if defined(HAVE_SHVIO)
+  dfbvideosink->rowstride = -1;
+#endif
 
   dfbvideosink->dfb = NULL;
   dfbvideosink->vmodes = NULL;
