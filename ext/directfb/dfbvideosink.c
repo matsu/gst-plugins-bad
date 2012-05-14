@@ -1022,6 +1022,7 @@ gst_dfbvideosink_can_blit_from_format (GstDfbVideoSink * dfbvideosink,
   DFBSurfaceDescription s_dsc;
   DFBAccelerationMask mask;
   DFBDisplayLayerConfig dlc, prev_dlc;
+  DFBDisplayLayerConfigFlags failed;
 
   g_return_val_if_fail (GST_IS_DFBVIDEOSINK (dfbvideosink), FALSE);
 
@@ -1051,7 +1052,7 @@ gst_dfbvideosink_can_blit_from_format (GstDfbVideoSink * dfbvideosink,
   dlc.pixelformat = format;
 
   ret = dfbvideosink->layer->TestConfiguration (dfbvideosink->layer, &dlc,
-      NULL);
+      &failed);
   if (ret != DFB_OK) {
     GST_DEBUG_OBJECT (dfbvideosink, "our layer refuses to operate in pixel "
         "format %s", gst_dfbvideosink_get_format_name (format));
