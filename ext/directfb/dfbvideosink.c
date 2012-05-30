@@ -941,6 +941,9 @@ gst_dfbvideosink_get_format_from_caps (GstCaps * caps)
       case GST_MAKE_FOURCC ('U', 'Y', 'V', 'Y'):
         pixel_format = DSPF_UYVY;
         break;
+      case GST_MAKE_FOURCC ('N', 'V', '1', '2'):
+        pixel_format = DSPF_NV12;
+        break;
       default:
         GST_WARNING ("unhandled YUV format %" GST_FOURCC_FORMAT,
             GST_FOURCC_ARGS (fourcc));
@@ -1018,6 +1021,10 @@ gst_dfbvideosink_get_caps_from_format (DFBSurfacePixelFormat format)
     case DSPF_YV12:
       is_yuv = TRUE;
       fourcc = GST_MAKE_FOURCC ('Y', 'V', '1', '2');
+      break;
+    case DSPF_NV12:
+      is_yuv = TRUE;
+      fourcc = GST_MAKE_FOURCC ('N', 'V', '1', '2');
       break;
     default:
       GST_WARNING ("unknown pixel format %s",
@@ -1224,6 +1231,8 @@ gst_dfbvideosink_getcaps (GstBaseSink * bsink)
         gst_caps_append (caps,
             gst_dfbvideosink_get_caps_from_format (DSPF_UYVY));
         gst_caps_append (caps,
+            gst_dfbvideosink_get_caps_from_format (DSPF_NV12));
+        gst_caps_append (caps,
             gst_dfbvideosink_get_caps_from_format (DSPF_RGB16));
         gst_caps_append (caps,
             gst_dfbvideosink_get_caps_from_format (DSPF_RGB24));
@@ -1250,6 +1259,7 @@ gst_dfbvideosink_getcaps (GstBaseSink * bsink)
        * DSPF_ARGB
        * DSPF_UYVY
        * DSPF_YV12
+       * DSPF_NV12
        */
       if (dfbvideosink->vio) {
         gst_caps_append (caps,
@@ -1259,6 +1269,10 @@ gst_dfbvideosink_getcaps (GstBaseSink * bsink)
               accelerated) || dfbvideosink->vio) {
         gst_caps_append (caps,
             gst_dfbvideosink_get_caps_from_format (DSPF_UYVY));
+      }
+      if (dfbvideosink->vio) {
+        gst_caps_append (caps,
+            gst_dfbvideosink_get_caps_from_format (DSPF_NV12));
       }
       if (gst_dfbvideosink_can_blit_from_format (dfbvideosink, DSPF_RGB16,
               accelerated) || dfbvideosink->vio) {
