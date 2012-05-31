@@ -1658,6 +1658,7 @@ byte2pixel (gint bytes, DFBSurfacePixelFormat dfbfmt)
 {
   switch (dfbfmt) {
     case DSPF_NV12:
+      return bytes * 2 / 3;
     case DSPF_NV16:
     case DSPF_YV12:
       return bytes;
