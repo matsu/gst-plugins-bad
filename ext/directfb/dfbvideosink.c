@@ -1874,7 +1874,7 @@ gst_dfbvideosink_show_frame (GstBaseSink * bsink, GstBuffer * buf)
       goto swrender;
     }
     viosurface[0].py = GST_BUFFER_DATA (buf);
-    if (is_ycbcr_planar (viosurface[0].format))
+    if (is_ycbcr (viosurface[0].format) && viosurface[0].format != REN_UYVY)
       viosurface[0].pc = viosurface[0].py + src_pitch * src.h;
     else
       viosurface[0].pc = 0;
@@ -1899,7 +1899,7 @@ gst_dfbvideosink_show_frame (GstBaseSink * bsink, GstBuffer * buf)
       goto swrender;
     }
     viosurface[1].py = data;
-    if (is_ycbcr_planar (viosurface[1].format))
+    if (is_ycbcr (viosurface[1].format) && viosurface[0].format != REN_UYVY)
       viosurface[1].pc = viosurface[1].py + dest_pitch * result.h;
     else
       viosurface[1].pc = 0;
