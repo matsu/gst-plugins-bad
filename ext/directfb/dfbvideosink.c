@@ -1760,12 +1760,14 @@ gst_dfbvideosink_show_frame (GstBaseSink * bsink, GstBuffer * buf)
   if (mem_cpy) {
     IDirectFBSurface *dest = NULL, *surface = NULL;
     guint8 *data;
-    gint dest_pitch, src_pitch, line;
+    gint dest_pitch, src_pitch;
     GstStructure *structure;
 #if defined(HAVE_SHVIO)
     DFBSurfacePixelFormat src_format, dst_format;
     struct ren_vid_surface viosurface[2];
     int ret;
+#else
+    gint line;
 #endif
 
     /* As we are not blitting no acceleration is possible. If the surface is
