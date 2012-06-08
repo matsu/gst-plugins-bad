@@ -52,6 +52,7 @@ GST_DEBUG_CATEGORY_STATIC (h264_parse_debug);
 #define DEFAULT_ACCESS_UNIT          FALSE
 #define DEFAULT_OUTPUT_FORMAT        GST_H264_PARSE_FORMAT_INPUT
 #define DEFAULT_CONFIG_INTERVAL      (0)
+#define DEFAULT_ST_CODE_PREFIX       FALSE
 
 enum
 {
@@ -60,6 +61,7 @@ enum
   PROP_ACCESS_UNIT,
   PROP_CONFIG_INTERVAL,
   PROP_OUTPUT_FORMAT,
+  PROP_ST_CODE_PREFIX,
   PROP_LAST
 };
 
@@ -895,10 +897,8 @@ gst_h264_parse_base_init (gpointer g_class)
 {
   GstElementClass *gstelement_class = GST_ELEMENT_CLASS (g_class);
 
-  gst_element_class_add_static_pad_template (gstelement_class,
-      &srctemplate);
-  gst_element_class_add_static_pad_template (gstelement_class,
-      &sinktemplate);
+  gst_element_class_add_static_pad_template (gstelement_class, &srctemplate);
+  gst_element_class_add_static_pad_template (gstelement_class, &sinktemplate);
   gst_element_class_set_details_simple (gstelement_class, "H264Parse",
       "Codec/Parser/Video",
       "Parses raw h264 stream",
@@ -942,6 +942,10 @@ gst_h264_parse_class_init (GstH264ParseClass * klass)
           "will be multiplexed in the data stream when detected.) (0 = disabled)",
           0, 3600, DEFAULT_CONFIG_INTERVAL,
           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+  g_object_class_install_property (gobject_class, PROP_ST_CODE_PREFIX,
+      g_param_spec_boolean ("start-code-prefix", "Put start code before nal",
+          "Put start code before nal (valid only if bytestream is specified)",
+          DEFAULT_ST_CODE_PREFIX, G_PARAM_READWRITE));
 
   gstelement_class->change_state = gst_h264_parse_change_state;
 }
@@ -971,6 +975,7 @@ gst_h264_parse_init (GstH264Parse * h264parse, GstH264ParseClass * g_class)
   h264parse->last_report = GST_CLOCK_TIME_NONE;
 
   h264parse->format = GST_H264_PARSE_FORMAT_INPUT;
+  h264parse->st_code_prefix = DEFAULT_ST_CODE_PREFIX;
 
   gst_h264_parse_reset (h264parse);
 }
@@ -1069,6 +1074,9 @@ gst_h264_parse_set_property (GObject * object, guint prop_id,
     case PROP_CONFIG_INTERVAL:
       parse->interval = g_value_get_uint (value);
       break;
+    case PROP_ST_CODE_PREFIX:
+      parse->st_code_prefix = g_value_get_boolean (value);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -1096,6 +1104,9 @@ gst_h264_parse_get_property (GObject * object, guint prop_id, GValue * value,
     case PROP_CONFIG_INTERVAL:
       g_value_set_uint (value, parse->interval);
       break;
+    case PROP_ST_CODE_PREFIX:
+      g_value_set_boolean (value, parse->st_code_prefix);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -1110,9 +1121,14 @@ gst_h264_parse_make_nal (GstH264Parse * h264parse, const guint8 * data,
 {
   GstBuffer *buf;
 
-  buf = gst_buffer_new_and_alloc (4 + len);
-  GST_WRITE_UINT32_BE (GST_BUFFER_DATA (buf), 1);
-  memcpy (GST_BUFFER_DATA (buf) + 4, data, len);
+  if (h264parse->st_code_prefix) {
+    buf = gst_buffer_new_and_alloc (4 + len);
+    GST_WRITE_UINT32_BE (GST_BUFFER_DATA (buf), 1);
+    memcpy (GST_BUFFER_DATA (buf) + 4, data, len);
+  } else {
+    buf = gst_buffer_new_and_alloc (len);
+    memcpy (GST_BUFFER_DATA (buf), data, len);
+  }
 
   return buf;
 }
@@ -1509,8 +1525,22 @@ gst_h264_parse_write_nal_prefix (GstH264Parse * h264parse, GstBuffer * nal)
 {
   guint nal_length = h264parse->nal_length_size;
   gint i;
+  GstBuffer *sub_buffer;
 
   g_assert (nal_length <= 4);
+
+  if (h264parse->format == GST_H264_PARSE_FORMAT_BYTE &&
+      !h264parse->st_code_prefix) {
+    sub_buffer = gst_buffer_create_sub (nal, nal_length,
+        GST_BUFFER_SIZE (nal) - nal_length);
+    if (sub_buffer == NULL) {
+      GST_ERROR_OBJECT (h264parse, "failed to create subbuffer");
+      return NULL;
+    }
+    gst_buffer_unref (nal);
+
+    return sub_buffer;
+  }
 
   /* ensure proper transformation on prefix if needed */
   if (h264parse->format == GST_H264_PARSE_FORMAT_SAMPLE) {

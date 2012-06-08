@@ -27,7 +27,6 @@
 #include <gst/base/gstadapter.h>
 
 G_BEGIN_DECLS
-
 #define GST_TYPE_H264PARSE \
   (gst_h264_parse_get_type())
 #define GST_H264PARSE(obj) \
@@ -38,7 +37,6 @@ G_BEGIN_DECLS
   (G_TYPE_CHECK_INSTANCE_TYPE((obj),GST_TYPE_H264PARSE))
 #define GST_IS_H264PARSE_CLASS(klass) \
   (G_TYPE_CHECK_CLASS_TYPE((klass),GST_TYPE_H264PARSE))
-
 typedef struct _GstH264Parse GstH264Parse;
 typedef struct _GstH264ParseClass GstH264ParseClass;
 
@@ -70,6 +68,8 @@ struct _GstH264Parse
   guint nal_length_size;
   guint format;
 
+  gboolean st_code_prefix;
+
   guint interval;
   GstClockTime last_report;
 
@@ -91,14 +91,14 @@ struct _GstH264Parse
 
   GstAdapter *adapter;
 
-  /* SPS: sequential parameter set */ 
+  /* SPS: sequential parameter set */
   GstH264Sps *sps_buffers[MAX_SPS_COUNT];
-  GstH264Sps *sps; /* Current SPS */ 
-  /* PPS: sequential parameter set */ 
+  GstH264Sps *sps;              /* Current SPS */
+  /* PPS: sequential parameter set */
   GstH264Pps *pps_buffers[MAX_PPS_COUNT];
-  GstH264Pps *pps; /* Current PPS */ 
+  GstH264Pps *pps;              /* Current PPS */
 
-  /* slice header */ 
+  /* slice header */
   guint8 first_mb_in_slice;
   guint8 slice_type;
   guint8 pps_id;
@@ -106,23 +106,23 @@ struct _GstH264Parse
   gboolean field_pic_flag;
   gboolean bottom_field_flag;
 
-  /* SEI: supplemental enhancement messages */ 
-  /* buffering period */ 
+  /* SEI: supplemental enhancement messages */
+  /* buffering period */
   guint32 initial_cpb_removal_delay[32];
-  /* picture timing */ 
+  /* picture timing */
   guint32 sei_cpb_removal_delay;
   guint32 sei_dpb_output_delay;
   guint8 sei_pic_struct;
-  guint8 sei_ct_type; 
-  /* And more... */ 
+  guint8 sei_ct_type;
+  /* And more... */
 
-  /* cached timestamps */ 
+  /* cached timestamps */
   GstClockTime dts;
   GstClockTime last_outbuf_dts;
-  GstClockTime ts_trn_nb; /* dts of last buffering period */ 
-  GstClockTime cur_duration; /* duration of the current access unit */ 
+  GstClockTime ts_trn_nb;       /* dts of last buffering period */
+  GstClockTime cur_duration;    /* duration of the current access unit */
 
-  /* for debug purpose */ 
+  /* for debug purpose */
   guint32 frame_cnt;
 
   /* NALU AU */
@@ -131,7 +131,7 @@ struct _GstH264Parse
   gint idr_offset;
 
   /* codec data NALUs to be inserted into stream */
-  GSList  *codec_nals;
+  GSList *codec_nals;
   /* SPS and PPS NALUs collected from stream to form codec_data in caps */
   GstBuffer *sps_nals[MAX_SPS_COUNT];
   GstBuffer *pps_nals[MAX_PPS_COUNT];
@@ -150,5 +150,4 @@ struct _GstH264ParseClass
 GType gst_h264_parse_get_type (void);
 
 G_END_DECLS
-
 #endif /* __GST_H264_PARSE_H__ */
