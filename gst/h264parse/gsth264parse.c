@@ -1689,6 +1689,7 @@ gst_h264_parse_push_buffer (GstH264Parse * h264parse, GstBuffer * buf)
           GST_BUFFER_SIZE (nals->data));
       GST_BUFFER_TIMESTAMP (nals->data) = GST_BUFFER_TIMESTAMP (buf);
       GST_BUFFER_DURATION (nals->data) = 0;
+      GST_BUFFER_FLAG_SET (nals->data, GST_BUFFER_FLAG_PREROLL);
 
       gst_buffer_set_caps (nals->data, h264parse->src_caps);
       (void) gst_pad_push (h264parse->srcpad, nals->data);
