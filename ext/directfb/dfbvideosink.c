@@ -575,8 +575,10 @@ gst_dfbvideosink_setup (GstDfbVideoSink * dfbvideosink)
         "DirectFB fullscreen");
     if (!dfbvideosink->dfb) {
       DFBGraphicsDeviceDescription hw_caps;
-      char *argv[] = { (char *) "-", (char *) "--dfb:quiet", NULL };
-      int argc = 2;
+      char *argv[] = { (char *) "-", (char *) "--dfb:quiet",
+        (char *) "--dfb:no-sighandler", NULL
+      };
+      int argc = 3;
       char **args;
 
       GST_DEBUG_OBJECT (dfbvideosink, "initializing DirectFB");
