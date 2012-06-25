@@ -126,6 +126,7 @@ struct _GstDfbVideoSink {
 #if defined(HAVE_SHVIO)
   SHVIO *vio;
   gint rowstride;
+  gint chroma_byte_offset;
 #endif
 };
 

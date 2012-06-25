@@ -1401,6 +1401,9 @@ gst_dfbvideosink_setcaps (GstBaseSink * bsink, GstCaps * caps)
 #if defined(HAVE_SHVIO)
   if (!gst_structure_get_int (structure, "rowstride", &dfbvideosink->rowstride))
     GST_LOG_OBJECT (dfbvideosink, "can't get rowstride from caps");
+  if (!gst_structure_get_int (structure, "chroma_byte_offset",
+          &dfbvideosink->chroma_byte_offset))
+    GST_LOG_OBJECT (dfbvideosink, "can't get chroma_byte_offset from caps");
 #endif
 
   dfbvideosink->fps_n = gst_value_get_fraction_numerator (framerate);
@@ -1877,7 +1880,10 @@ gst_dfbvideosink_show_frame (GstBaseSink * bsink, GstBuffer * buf)
     }
     viosurface[0].py = GST_BUFFER_DATA (buf);
     if (is_ycbcr (viosurface[0].format) && viosurface[0].format != REN_UYVY)
-      viosurface[0].pc = viosurface[0].py + viosurface[0].pitch * src.h;
+      viosurface[0].pc =
+          (dfbvideosink->chroma_byte_offset >= 0) ?
+          viosurface[0].py + dfbvideosink->chroma_byte_offset :
+          viosurface[0].py + viosurface[0].pitch * src.h;
     else
       viosurface[0].pc = 0;
     viosurface[0].pa = 0;
@@ -2603,6 +2609,7 @@ gst_dfbvideosink_init (GstDfbVideoSink * dfbvideosink)
   dfbvideosink->fps_n = 0;
 #if defined(HAVE_SHVIO)
   dfbvideosink->rowstride = -1;
+  dfbvideosink->chroma_byte_offset = -1;
 #endif
 
   dfbvideosink->dfb = NULL;
