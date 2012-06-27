@@ -69,7 +69,8 @@ enum
 {
   GST_H264_PARSE_FORMAT_SAMPLE = 0,
   GST_H264_PARSE_FORMAT_BYTE,
-  GST_H264_PARSE_FORMAT_INPUT
+  GST_H264_PARSE_FORMAT_INPUT,
+  GST_H264_PARSE_FORMAT_AVC
 };
 
 #define GST_H264_PARSE_FORMAT_TYPE (gst_h264_parse_format_get_type())
@@ -1133,6 +1134,28 @@ gst_h264_parse_make_nal (GstH264Parse * h264parse, const guint8 * data,
   return buf;
 }
 
+static void
+gst_h264_parse_format_from_caps (GstCaps * caps, guint * format)
+{
+  g_return_if_fail (gst_caps_is_fixed (caps));
+
+  GST_DEBUG ("parsing caps: %" GST_PTR_FORMAT, caps);
+
+  if (caps && gst_caps_get_size (caps) > 0) {
+    GstStructure *s = gst_caps_get_structure (caps, 0);
+    const gchar *str = NULL;
+
+    if (format) {
+      if ((str = gst_structure_get_string (s, "stream-format"))) {
+        if (strcmp (str, "avc") == 0)
+          *format = GST_H264_PARSE_FORMAT_AVC;
+        else if (strcmp (str, "byte-stream") == 0)
+          *format = GST_H264_PARSE_FORMAT_BYTE;
+      }
+    }
+  }
+}
+
 /* byte together avc codec data based on collected pps and sps so far */
 static GstBuffer *
 gst_h264_parse_make_codec_data (GstH264Parse * h264parse)
@@ -1407,6 +1430,7 @@ gst_h264_parse_sink_setcaps (GstPad * pad, GstCaps * caps)
   const GValue *value;
   guint8 *data;
   guint size, num_sps, num_pps;
+  guint format = GST_H264_PARSE_FORMAT_SAMPLE;
 
   h264parse = GST_H264PARSE (GST_PAD_PARENT (pad));
 
@@ -1418,8 +1442,12 @@ gst_h264_parse_sink_setcaps (GstPad * pad, GstCaps * caps)
   gst_structure_get_fraction (str, "framerate", &h264parse->fps_num,
       &h264parse->fps_den);
 
+  /* get upstream format from caps */
+  gst_h264_parse_format_from_caps (caps, &format);
+
   /* packetized video has a codec_data */
-  if ((value = gst_structure_get_value (str, "codec_data"))) {
+  if (format != GST_H264_PARSE_FORMAT_BYTE &&
+      (value = gst_structure_get_value (str, "codec_data"))) {
     GstBuffer *buffer;
     gint profile;
     GstNalBs bs;
