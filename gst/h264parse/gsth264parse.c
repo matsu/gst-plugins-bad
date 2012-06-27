@@ -1526,8 +1526,14 @@ gst_h264_parse_write_nal_prefix (GstH264Parse * h264parse, GstBuffer * nal)
   guint nal_length = h264parse->nal_length_size;
   gint i;
   GstBuffer *sub_buffer;
+  guint8 *data;
 
   g_assert (nal_length <= 4);
+
+  /* check if start code is 3 byte */
+  data = GST_BUFFER_DATA (nal);
+  if (!h264parse->packetized && data[2] == 0x01)
+    nal_length -= 1;
 
   if (h264parse->format == GST_H264_PARSE_FORMAT_BYTE &&
       !h264parse->st_code_prefix) {
@@ -1827,7 +1833,10 @@ gst_h264_parse_push_nal (GstH264Parse * h264parse, GstBuffer * nal,
   g_return_val_if_fail (size >= nal_length + 1, NULL);
 
   /* determine if AU complete */
-  nal_type = data[nal_length] & 0x1f;
+  if (!h264parse->packetized && data[2] == 0x01)
+    nal_type = data[nal_length - 1] & 0x1f;
+  else
+    nal_type = data[nal_length] & 0x1f;
   GST_LOG_OBJECT (h264parse, "nal type: %d", nal_type);
   h264parse->picture_start |= (nal_type == 1 || nal_type == 2 || nal_type == 5);
   /* first_mb_in_slice == 0 considered start of frame */
@@ -1983,14 +1992,24 @@ gst_h264_parse_chain_forward (GstH264Parse * h264parse, gboolean discont,
     data = gst_adapter_peek (h264parse->adapter, avail);
 
     if (!h264parse->packetized) {
-      /* Bytestream format, first 4 bytes are sync code */
-      /* Find next NALU header */
+      /* Bytestream format, first 3/4 bytes are sync code */
+      /* Find next NALU header, might be 3 or 4 bytes */
       for (i = 1; i < avail - 4; ++i) {
-        if (data[i + 0] == 0 && data[i + 1] == 0 && data[i + 2] == 0
-            && data[i + 3] == 1) {
-          next_nalu_pos = i;
+        if (data[i + 1] == 0 && data[i + 2] == 0 && data[i + 3] == 1) {
+          if (data[i + 0] == 0)
+            next_nalu_pos = i;
+          else
+            next_nalu_pos = i + 1;
           break;
         }
+      }
+      /* skip sync */
+      if (data[2] == 0x1) {
+        data += 3;
+        avail -= 3;
+      } else {
+        data += 4;
+        avail -= 4;
       }
     } else {
       guint32 nalu_size;
@@ -2017,11 +2036,10 @@ gst_h264_parse_chain_forward (GstH264Parse * h264parse, gboolean discont,
       } else {
         next_nalu_pos = avail;
       }
+      /* skip nalu_size bytes or sync */
+      data += h264parse->nal_length_size;
+      avail -= h264parse->nal_length_size;
     }
-
-    /* skip nalu_size bytes or sync */
-    data += h264parse->nal_length_size;
-    avail -= h264parse->nal_length_size;
 
     /* Figure out if this is a delta unit */
     {
