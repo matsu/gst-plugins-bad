@@ -1446,7 +1446,7 @@ gst_h264_parse_sink_setcaps (GstPad * pad, GstCaps * caps)
   gst_h264_parse_format_from_caps (caps, &format);
 
   /* packetized video has a codec_data */
-  if (format != GST_H264_PARSE_FORMAT_BYTE &&
+  if (format == GST_H264_PARSE_FORMAT_AVC &&
       (value = gst_structure_get_value (str, "codec_data"))) {
     GstBuffer *buffer;
     gint profile;
