@@ -1079,7 +1079,7 @@ gst_dfbvideosink_can_blit_from_format (GstDfbVideoSink * dfbvideosink,
   IDirectFBSurface *surface = NULL;
   DFBSurfaceDescription s_dsc;
   DFBAccelerationMask mask;
-  DFBDisplayLayerConfig dlc, prev_dlc;
+  DFBDisplayLayerConfig dlc;
   DFBDisplayLayerConfigFlags failed;
 
   g_return_val_if_fail (GST_IS_DFBVIDEOSINK (dfbvideosink), FALSE);
@@ -1097,14 +1097,6 @@ gst_dfbvideosink_can_blit_from_format (GstDfbVideoSink * dfbvideosink,
     goto beach;
   }
 
-  /* Backup layer configuration */
-  ret = dfbvideosink->layer->GetConfiguration (dfbvideosink->layer, &prev_dlc);
-  if (ret != DFB_OK) {
-    GST_WARNING_OBJECT (dfbvideosink, "failed when getting current layer "
-        "configuration");
-    goto beach;
-  }
-
   /* Test configuration of the layer to this pixel format */
   dlc.flags = DLCONF_PIXELFORMAT;
   dlc.pixelformat = format;
@@ -1114,14 +1106,6 @@ gst_dfbvideosink_can_blit_from_format (GstDfbVideoSink * dfbvideosink,
   if (ret != DFB_OK) {
     GST_DEBUG_OBJECT (dfbvideosink, "our layer refuses to operate in pixel "
         "format %s", gst_dfbvideosink_get_format_name (format));
-    goto beach;
-  }
-
-  ret = dfbvideosink->layer->SetConfiguration (dfbvideosink->layer, &dlc);
-  if (ret != DFB_OK) {
-    GST_WARNING_OBJECT (dfbvideosink, "our layer refuses to operate in pixel "
-        "format, though this format was successfully tested earlied %s",
-        gst_dfbvideosink_get_format_name (format));
     goto beach;
   }
 
@@ -1141,14 +1125,6 @@ gst_dfbvideosink_can_blit_from_format (GstDfbVideoSink * dfbvideosink,
     GST_DEBUG_OBJECT (dfbvideosink, "blitting from format %s to our primary "
         "is not accelerated", gst_dfbvideosink_get_format_name (format));
     res = TRUE;
-  }
-
-  /* Restore original layer configuration */
-  ret = dfbvideosink->layer->SetConfiguration (dfbvideosink->layer, &prev_dlc);
-  if (ret != DFB_OK) {
-    GST_WARNING_OBJECT (dfbvideosink, "failed when restoring layer "
-        "configuration");
-    goto beach;
   }
 
 beach:
