@@ -1486,6 +1486,7 @@ gst_dfbvideosink_setcaps (GstBaseSink * bsink, GstCaps * caps)
   if (dfbvideosink->dfb) {
     DFBResult ret;
     GstDfbVMode vmode;
+    DFBDisplayLayerConfig lc;
 
     GST_DEBUG_OBJECT (dfbvideosink, "trying to adapt the video mode to video "
         "geometry");
@@ -1494,7 +1495,6 @@ gst_dfbvideosink_setcaps (GstBaseSink * bsink, GstCaps * caps)
     if (gst_dfbvideosink_get_best_vmode (dfbvideosink,
             GST_VIDEO_SINK_WIDTH (dfbvideosink),
             GST_VIDEO_SINK_HEIGHT (dfbvideosink), &vmode)) {
-      DFBDisplayLayerConfig lc;
       gint width, height, bpp;
 
       width = vmode.width;
@@ -1510,23 +1510,23 @@ gst_dfbvideosink_setcaps (GstBaseSink * bsink, GstCaps * caps)
         GST_WARNING_OBJECT (dfbvideosink, "failed setting video mode %dx%d "
             "at %d bpp", width, height, bpp);
       }
+    }
 
-      lc.flags = DLCONF_PIXELFORMAT;
-      lc.pixelformat = pixel_format;
+    lc.flags = DLCONF_PIXELFORMAT;
+    lc.pixelformat = pixel_format;
 
-      ret = dfbvideosink->layer->SetConfiguration (dfbvideosink->layer, &lc);
-      if (ret != DFB_OK) {
-        GST_WARNING_OBJECT (dfbvideosink, "failed setting layer pixelformat "
-            "to %s", gst_dfbvideosink_get_format_name (pixel_format));
-      } else {
-        dfbvideosink->layer->GetConfiguration (dfbvideosink->layer, &lc);
-        dfbvideosink->out_width = lc.width;
-        dfbvideosink->out_height = lc.height;
-        dfbvideosink->pixel_format = lc.pixelformat;
-        GST_DEBUG_OBJECT (dfbvideosink, "layer %d now configured to %dx%d %s",
-            dfbvideosink->layer_id, lc.width, lc.height,
-            gst_dfbvideosink_get_format_name (lc.pixelformat));
-      }
+    ret = dfbvideosink->layer->SetConfiguration (dfbvideosink->layer, &lc);
+    if (ret != DFB_OK) {
+      GST_WARNING_OBJECT (dfbvideosink, "failed setting layer pixelformat "
+          "to %s", gst_dfbvideosink_get_format_name (pixel_format));
+    } else {
+      dfbvideosink->layer->GetConfiguration (dfbvideosink->layer, &lc);
+      dfbvideosink->out_width = lc.width;
+      dfbvideosink->out_height = lc.height;
+      dfbvideosink->pixel_format = lc.pixelformat;
+      GST_DEBUG_OBJECT (dfbvideosink, "layer %d now configured to %dx%d %s",
+          dfbvideosink->layer_id, lc.width, lc.height,
+          gst_dfbvideosink_get_format_name (lc.pixelformat));
     }
   }
 #if defined(HAVE_SHVIO)
