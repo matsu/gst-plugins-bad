@@ -621,7 +621,7 @@ gst_dfbvideosink_setup (GstDfbVideoSink * dfbvideosink)
         dfbvideosink->hw_scaling = TRUE;
       } else {
         GST_DEBUG_OBJECT (dfbvideosink, "StretchBlit is not accelerated");
-        dfbvideosink->hw_scaling = TRUE;        /* temporary support */
+        dfbvideosink->hw_scaling = FALSE;
       }
 
       dfbvideosink->layer_id = -1;
