@@ -752,6 +752,17 @@ gst_dfbvideosink_setup (GstDfbVideoSink * dfbvideosink)
 
       dfbvideosink->layer->EnableCursor (dfbvideosink->layer, TRUE);
 
+      /* We prefer a double buffered primary surface */
+      if (dfbvideosink->backbuffer) {
+        DFBDisplayLayerConfig lc;
+
+        lc.flags = DLCONF_BUFFERMODE | DLCONF_SURFACE_CAPS;
+        lc.buffermode = DLBM_BACKVIDEO;
+        lc.surface_caps = DSCAPS_FLIPPING;
+
+        dfbvideosink->layer->SetConfiguration (dfbvideosink->layer, &lc);
+      }
+
       GST_DEBUG_OBJECT (dfbvideosink, "getting primary surface");
       dfbvideosink->layer->GetSurface (dfbvideosink->layer,
           &dfbvideosink->primary);
