@@ -2758,7 +2758,7 @@ static gboolean
 plugin_init (GstPlugin * plugin)
 {
   return gst_element_register (plugin, "legacyh264parse",
-      GST_RANK_NONE, GST_TYPE_H264PARSE);
+      GST_RANK_PRIMARY + 2, GST_TYPE_H264PARSE);
 }
 
 GST_PLUGIN_DEFINE (GST_VERSION_MAJOR,
