@@ -15,6 +15,8 @@ libgstdfbvideosink_la_LIBTOOLFLAGS = --tag=disable-static
 
 noinst_HEADERS = dfbvideosink.h
 
-noinst_PROGRAMS = dfb-example
+noinst_PROGRAMS = dfb-example dfb-video-example
 dfb_example_CFLAGS = $(GST_CFLAGS) $(DIRECTFB_CFLAGS)
 dfb_example_LDADD = $(GST_LIBS) $(DIRECTFB_LIBS)
+dfb_video_example_CFLAGS = $(GST_CFLAGS) $(DIRECTFB_CFLAGS)
+dfb_video_example_LDADD = $(GST_LIBS) $(DIRECTFB_LIBS)
