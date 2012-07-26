@@ -102,7 +102,8 @@ struct _GstDfbVideoSink {
   
   /* Embedded */
   IDirectFBSurface *ext_surface;
-  
+  GstVideoRectangle window;
+
   DFBSurfacePixelFormat pixel_format;
   
   gboolean hw_scaling;
