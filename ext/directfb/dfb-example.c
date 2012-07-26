@@ -211,6 +211,8 @@ main (int argc, char *argv[])
   }
 
   primary->Clear (primary, 0x00, 0x00, 0x00, 0xFF);
+  primary->Flip (primary, NULL, DSFLIP_NONE);
+  primary->Clear (primary, 0x00, 0x00, 0x00, 0xFF);
 
   /* Let's play ! */
   gst_element_set_state (pipeline, GST_STATE_PLAYING);
