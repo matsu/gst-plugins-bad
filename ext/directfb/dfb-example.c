@@ -47,7 +47,6 @@ main (int argc, char *argv[])
   IDirectFBDisplayLayer *layer;
   DFBDisplayLayerID layer_id;
   DFBDisplayLayerConfig config;
-  IDirectFBSurface *sub_surface;
   DFBRectangle rect;
   int opt;
   int tmp_argc;
@@ -147,10 +146,6 @@ main (int argc, char *argv[])
   if (rect.h == 0)
     rect.h = screen_height;
 
-  /* get the surface that move to a position specified with a offset
-     coordinate based on center */
-  primary->GetSubSurface (primary, &rect, &sub_surface);
-
   /* Creating our pipeline : v4l2src ! dfbvideosink (optional: videocrop) */
   pipeline = gst_pipeline_new (NULL);
   g_assert (pipeline);
@@ -170,8 +165,9 @@ main (int argc, char *argv[])
 
   /* That's the interesting part, giving the primary surface to dfbvideosink.
      And keep-aspect-ratio is set. */
-  g_object_set (sink, "surface", sub_surface, "keep-aspect-ratio",
-      is_keep_aspect, NULL);
+  g_object_set (sink, "surface", primary, "keep-aspect-ratio",
+      is_keep_aspect, "window-width", rect.w, "window-height", rect.h,
+      "window-x", rect.x, "window-y", rect.y, NULL);
 
   /* Adding elements to the pipeline */
   gst_bin_add_many (GST_BIN (pipeline), src, sink, NULL);
@@ -228,7 +224,6 @@ main (int argc, char *argv[])
   g_main_loop_unref (loop);
 
   /* Release DirectFB context and surface */
-  sub_surface->Release (sub_surface);
   primary->Release (primary);
   dfb->Release (dfb);
 
