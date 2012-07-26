@@ -225,7 +225,10 @@ main (int argc, char *argv[])
 
   /* Release DirectFB context and surface */
   primary->Release (primary);
+  layer->Release (layer);
   dfb->Release (dfb);
+
+  gst_deinit ();
 
   for (i = 1; i < tmp_argc; i++) {
     free (tmp_argv[i]);
