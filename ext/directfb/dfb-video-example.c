@@ -6,6 +6,9 @@
 static IDirectFB *dfb = NULL;
 static IDirectFBSurface *primary = NULL;
 static GstElement *pipeline;
+static struct timeval prev_tv;
+static gdouble playback_rate = 1.0;
+static gint64 position;
 
 #define COMMAND_BUF_SIZE 32
 #define PARAM_BUF_SIZE 32
@@ -150,6 +153,7 @@ display_help (void)
   printf (" 2 --- Pause movie\n");
   printf (" 3 --- Playing movie\n");
   printf (" seek [number(sec)] --- seek to specified time later\n");
+  printf (" rate [playback rate] --- playback rate\n");
   printf (" h --- Help\n");
 }
 
@@ -186,6 +190,40 @@ channel_cb (GIOChannel * source, GIOCondition condition, gpointer data)
             GST_SEEK_TYPE_NONE, GST_CLOCK_TIME_NONE)) {
       printf ("failed to seek");
       return TRUE;
+    }
+  } else if (strcmp (command, "rate") == 0) {
+    GstFormat fmt = GST_FORMAT_TIME;
+    gdouble rate;
+
+    if (!gst_element_query_position (pipeline, &fmt, &position)) {
+      printf ("failed to get current time\n");
+      return TRUE;
+    }
+
+    rate = atof (param);
+
+    if (rate > 1.0 || rate < -1.0) {
+      printf ("change playback rate to %0.5lf\n", rate);
+      gettimeofday (&prev_tv, NULL);
+      playback_rate = rate;
+      if (!gst_element_seek (pipeline, 1.0, GST_FORMAT_TIME,
+              GST_SEEK_FLAG_ACCURATE | GST_SEEK_FLAG_FLUSH,
+              GST_SEEK_TYPE_SET, position,
+              GST_SEEK_TYPE_NONE, GST_CLOCK_TIME_NONE)) {
+        printf ("failed to seek\n");
+        return TRUE;
+      }
+    } else if (rate > 0.0 && rate <= 1.0) {
+      printf ("change playback rate to %0.5lf\n", rate);
+      if (!gst_element_seek (pipeline, rate, GST_FORMAT_TIME,
+              GST_SEEK_FLAG_ACCURATE | GST_SEEK_FLAG_FLUSH,
+              GST_SEEK_TYPE_SET, position,
+              GST_SEEK_TYPE_NONE, GST_CLOCK_TIME_NONE)) {
+        printf ("failed to seek\n");
+        return TRUE;
+      }
+    } else {
+      printf ("unsupported playback rate\n");
     }
   } else if (strcmp (command, "0") == 0) {
     /* Movie STOP */
@@ -239,6 +277,34 @@ event_loop (GstElement * pipeline)
 
         if (gst_structure_has_name (s, "GstVideExampleInterrupt"))
           loop = FALSE;
+      }
+        break;
+      case GST_MESSAGE_ELEMENT:
+      {
+        const GstStructure *s;
+        gint64 duration;
+        struct timeval cur_tv;
+
+        s = gst_message_get_structure (message);
+
+        if (gst_structure_has_name (s, "FrameRendered")) {
+          if (playback_rate == 1.0)
+            break;
+
+          gettimeofday (&cur_tv, NULL);
+          duration = (((gint64) cur_tv.tv_sec * 1000000 + cur_tv.tv_usec) - ((gint64) prev_tv.tv_sec * 1000000 + prev_tv.tv_usec)) * 1000;      /* calculation in nano second */
+          memcpy (&prev_tv, &cur_tv, sizeof (prev_tv));
+
+          position += playback_rate * duration;
+
+          if (!gst_element_seek (pipeline, 1.0, GST_FORMAT_TIME,
+                  GST_SEEK_FLAG_FLUSH | GST_SEEK_FLAG_ACCURATE,
+                  GST_SEEK_TYPE_SET, position,
+                  GST_SEEK_TYPE_NONE, GST_CLOCK_TIME_NONE)) {
+            printf ("failed to seek\n");
+            return;
+          }
+        }
       }
         break;
       default:
