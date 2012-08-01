@@ -112,6 +112,7 @@ struct _GstDfbVideoSink {
   gboolean vsync;
   gboolean setup;
   gboolean running;
+  gboolean frame_rendered;
   
   /* Color balance */
   GList *cb_channels;

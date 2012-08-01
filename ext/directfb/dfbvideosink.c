@@ -1610,6 +1610,7 @@ gst_dfbvideosink_change_state (GstElement * element, GstStateChange transition)
       }
       break;
     case GST_STATE_CHANGE_PAUSED_TO_PLAYING:
+      dfbvideosink->frame_rendered = TRUE;
       break;
     default:
       break;
@@ -1621,6 +1622,7 @@ gst_dfbvideosink_change_state (GstElement * element, GstStateChange transition)
 
   switch (transition) {
     case GST_STATE_CHANGE_PLAYING_TO_PAUSED:
+      dfbvideosink->frame_rendered = FALSE;
       break;
     case GST_STATE_CHANGE_PAUSED_TO_READY:
       dfbvideosink->fps_d = 0;
@@ -1997,6 +1999,14 @@ gst_dfbvideosink_show_frame (GstBaseSink * bsink, GstBuffer * buf)
         dfbvideosink->primary->Flip (dfbvideosink->primary, NULL, DSFLIP_NONE);
       }
     }
+  }
+
+  if (dfbvideosink->frame_rendered) {
+    gst_element_post_message (GST_ELEMENT_CAST (dfbvideosink),
+        gst_message_new_element (GST_OBJECT_CAST (dfbvideosink),
+            gst_structure_new ("FrameRendered",
+                "message", G_TYPE_STRING, "First frame was rendered", NULL)));
+    dfbvideosink->frame_rendered = FALSE;
   }
 
 beach:
@@ -2667,6 +2677,7 @@ gst_dfbvideosink_init (GstDfbVideoSink * dfbvideosink)
   dfbvideosink->vsync = TRUE;
   dfbvideosink->setup = FALSE;
   dfbvideosink->running = FALSE;
+  dfbvideosink->frame_rendered = FALSE;
 
   dfbvideosink->cb_channels = NULL;
   dfbvideosink->brightness = -1;
