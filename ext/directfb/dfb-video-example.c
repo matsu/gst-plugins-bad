@@ -288,6 +288,9 @@ event_loop (GstElement * pipeline)
         s = gst_message_get_structure (message);
 
         if (gst_structure_has_name (s, "FrameRendered")) {
+          GstFormat fmt = GST_FORMAT_TIME;
+          gint64 total_duration;
+
           if (playback_rate == 1.0)
             break;
 
@@ -296,6 +299,13 @@ event_loop (GstElement * pipeline)
           memcpy (&prev_tv, &cur_tv, sizeof (prev_tv));
 
           position += playback_rate * duration;
+          gst_element_query_duration (pipeline, &fmt, &total_duration);
+
+          if (position < 0 || position > total_duration) {
+            /* finish when going beyond playback time */
+            loop = FALSE;
+            break;
+          }
 
           if (!gst_element_seek (pipeline, 1.0, GST_FORMAT_TIME,
                   GST_SEEK_FLAG_FLUSH | GST_SEEK_FLAG_ACCURATE,
