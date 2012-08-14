@@ -292,7 +292,7 @@ event_loop (GstElement * pipeline)
           GstFormat fmt = GST_FORMAT_TIME;
           gint64 total_duration;
 
-          if (playback_rate == 1.0)
+          if (playback_rate > 0.0 && playback_rate <= 1.0)
             break;
 
           gettimeofday (&cur_tv, NULL);
