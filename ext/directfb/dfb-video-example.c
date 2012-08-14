@@ -215,6 +215,7 @@ channel_cb (GIOChannel * source, GIOCondition condition, gpointer data)
       }
     } else if (rate > 0.0 && rate <= 1.0) {
       printf ("change playback rate to %0.5lf\n", rate);
+      playback_rate = rate;
       if (!gst_element_seek (pipeline, rate, GST_FORMAT_TIME,
               GST_SEEK_FLAG_ACCURATE | GST_SEEK_FLAG_FLUSH,
               GST_SEEK_TYPE_SET, position,
