@@ -2168,10 +2168,14 @@ gst_h264_parse_chain_forward (GstH264Parse * h264parse, gboolean discont,
 
       /* Ignore upstream dts that stalls or goes backward. Upstream elements
        * like filesrc would keep on writing timestamp=0.  XXX: is this correct?
+       * Only the dts in the baseline profile should be ignored when a timestamp
+       * goes backward because other profiles can have B slices that could be
+       * reordered in their own stream.
        * TODO: better way to detect whether upstream timstamps are useful */
       if (h264parse->last_outbuf_dts != GST_CLOCK_TIME_NONE
           && outbuf_dts != GST_CLOCK_TIME_NONE
-          && outbuf_dts <= h264parse->last_outbuf_dts)
+          && outbuf_dts <= h264parse->last_outbuf_dts
+          && h264parse->sps && h264parse->sps->profile_idc == 66)
         outbuf_dts = GST_CLOCK_TIME_NONE;
 
       if ((got_frame || delta_unit) && start) {
