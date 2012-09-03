@@ -90,7 +90,7 @@ create_video_pipeline (GstPad * pad, gpointer data)
     decoder = gst_element_factory_make ("omx_wmvdec", NULL);
     g_assert (decoder);
   } else {
-    printf ("Audio isn't supported yet.\n");
+    printf ("%s isn't supported.\n", mime);
     return;
   }
 
@@ -121,7 +121,10 @@ on_pad_added (GstElement * element, GstPad * pad, gpointer data)
   /* We can now link this pad with the gst-omx decoder or h264parse sink pad */
   printf ("Dynamic pad created, linking\n");
 
-  create_video_pipeline (pad, data);
+  if (strcmp (gst_pad_get_name (pad), "video_00") == 0)
+    create_video_pipeline (pad, data);
+  else
+    printf ("%s isn't acceptable.\n", gst_pad_get_name (pad));
 }
 
 static void
