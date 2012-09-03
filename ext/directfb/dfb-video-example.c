@@ -48,18 +48,14 @@ create_video_pipeline (GstPad * pad, gpointer data)
   GstCaps *caps;
   GstStructure *structure;
   const gchar *mime;
+  static GstElement *queue;
   static GstElement *decoder, *parser;
 
-  if (decoder) {
-    /* If decoder plugin has been already created, demuxer plugin just gets
+  if (queue) {
+    /* If queue plugin has been already created, queue plugin just gets
        a link to a peer pad. This route is passed when the state is changed. */
-    if (parser) {
-      sinkpad = gst_element_get_static_pad (parser, "sink");
-      gst_pad_link (pad, sinkpad);
-    } else {
-      sinkpad = gst_element_get_static_pad (decoder, "sink");
-      gst_pad_link (pad, sinkpad);
-    }
+    sinkpad = gst_element_get_static_pad (queue, "sink");
+    gst_pad_link (pad, sinkpad);
     return;
   }
 
@@ -94,23 +90,28 @@ create_video_pipeline (GstPad * pad, gpointer data)
     return;
   }
 
+  queue = gst_element_factory_make ("queue", NULL);
+  g_assert (queue);
+
   if (parser) {
     g_object_set (parser, "output-format", 1, "split-packetized", TRUE, NULL);
-    gst_bin_add_many (GST_BIN (pipeline), parser, decoder, NULL);
-    sinkpad = gst_element_get_static_pad (parser, "sink");
+    gst_bin_add_many (GST_BIN (pipeline), parser, decoder, queue, NULL);
+    sinkpad = gst_element_get_static_pad (queue, "sink");
     gst_pad_link (pad, sinkpad);
-    gst_element_link_many (parser, decoder, peer_element, NULL);
+    gst_element_link_many (queue, parser, decoder, peer_element, NULL);
     gst_object_unref (sinkpad);
 
+    gst_element_set_state (queue, GST_STATE_PLAYING);
     gst_element_set_state (parser, GST_STATE_PLAYING);
     gst_element_set_state (decoder, GST_STATE_PLAYING);
   } else {
-    gst_bin_add (GST_BIN (pipeline), decoder);
-    sinkpad = gst_element_get_static_pad (decoder, "sink");
+    gst_bin_add_many (GST_BIN (pipeline), decoder, queue, NULL);
+    sinkpad = gst_element_get_static_pad (queue, "sink");
     gst_pad_link (pad, sinkpad);
-    gst_element_link (decoder, peer_element);
+    gst_element_link_many (queue, decoder, peer_element, NULL);
     gst_object_unref (sinkpad);
 
+    gst_element_set_state (queue, GST_STATE_PLAYING);
     gst_element_set_state (decoder, GST_STATE_PLAYING);
   }
 }
