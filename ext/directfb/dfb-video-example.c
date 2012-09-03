@@ -41,7 +41,7 @@ usage (char *cmd)
 }
 
 static void
-on_pad_added (GstElement * element, GstPad * pad, gpointer data)
+create_video_pipeline (GstPad * pad, gpointer data)
 {
   GstPad *sinkpad;
   GstElement *peer_element = (GstElement *) data;
@@ -49,9 +49,6 @@ on_pad_added (GstElement * element, GstPad * pad, gpointer data)
   GstStructure *structure;
   const gchar *mime;
   static GstElement *decoder, *parser;
-
-  /* We can now link this pad with the gst-omx decoder or h264parse sink pad */
-  printf ("Dynamic pad created, linking\n");
 
   if (decoder) {
     /* If decoder plugin has been already created, demuxer plugin just gets
@@ -116,6 +113,15 @@ on_pad_added (GstElement * element, GstPad * pad, gpointer data)
 
     gst_element_set_state (decoder, GST_STATE_PLAYING);
   }
+}
+
+static void
+on_pad_added (GstElement * element, GstPad * pad, gpointer data)
+{
+  /* We can now link this pad with the gst-omx decoder or h264parse sink pad */
+  printf ("Dynamic pad created, linking\n");
+
+  create_video_pipeline (pad, data);
 }
 
 static void
