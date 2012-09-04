@@ -4,12 +4,12 @@ plugin_LTLIBRARIES = libgstdfbvideosink.la
 libgstdfbvideosink_la_SOURCES =  dfbvideosink.c
 libgstdfbvideosink_la_CFLAGS = $(GST_CFLAGS) $(GST_PLUGINS_BASE_CFLAGS) \
 			       $(DIRECTFB_CFLAGS) $(SHVIO_CFLAGS) \
-			       $(UIOMUX_CFLAGS)
+			       $(SHMERAM_CFLAGS) $(UIOMUX_CFLAGS)
 libgstdfbvideosink_la_LIBADD = $(GST_PLUGINS_BASE_LIBS) \
 			       -lgstvideo-$(GST_MAJORMINOR) \
 			       -lgstinterfaces-$(GST_MAJORMINOR) \
 			       $(DIRECTFB_LIBS) $(LIBOIL_LIBS) \
-			       $(SHVIO_LIBS) $(UIOMUX_LIBS)
+			       $(SHVIO_LIBS) $(SHMERAM_LIBS) $(UIOMUX_LIBS)
 libgstdfbvideosink_la_LDFLAGS = $(GST_PLUGIN_LDFLAGS)
 libgstdfbvideosink_la_LIBTOOLFLAGS = --tag=disable-static
 

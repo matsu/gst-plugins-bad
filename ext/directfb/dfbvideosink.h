@@ -27,16 +27,17 @@
 #if defined(HAVE_SHVIO)
 #include <uiomux/uiomux.h>
 #include <shvio/shvio.h>
+#if defined(HAVE_SHMERAM)
+#include <meram/meram.h>
+#endif
 #endif
 
 G_BEGIN_DECLS
-
 #define GST_TYPE_DFBVIDEOSINK              (gst_dfbvideosink_get_type())
 #define GST_DFBVIDEOSINK(obj)              (G_TYPE_CHECK_INSTANCE_CAST ((obj), GST_TYPE_DFBVIDEOSINK, GstDfbVideoSink))
 #define GST_DFBVIDEOSINK_CLASS(klass)      (G_TYPE_CHECK_CLASS_CAST ((klass), GST_TYPE_DFBVIDEOSINK, GstDfbVideoSinkClass))
 #define GST_IS_DFBVIDEOSINK(obj)           (G_TYPE_CHECK_INSTANCE_TYPE ((obj), GST_TYPE_DFBVIDEOSINK))
 #define GST_IS_DFBVIDEOSINK_CLASS(klass)   (G_TYPE_CHECK_CLASS_TYPE ((klass), GST_TYPE_DFBVIDEOSINK))
-
 typedef struct _GstDfbVideoSink GstDfbVideoSink;
 typedef struct _GstDfbVideoSinkClass GstDfbVideoSinkClass;
 
@@ -126,10 +127,23 @@ struct _GstDfbVideoSink {
   GValue *par;
 
 #if defined(HAVE_SHVIO)
+  enum {
+    SRC = 0,
+    DST = 1,
+  };
+
   SHVIO *vio;
   gint rowstride;
   gint chroma_byte_offset;
-#endif
+#if defined(HAVE_SHMERAM)
+  MERAM *meram;
+  ICB *icby[1];		/* TODO: add an entry for writeback cache */
+  ICB *icbc[1];		/* TODO: add an entry for writeback cache */
+/* NOTE: ICB #0 to #4 may be used by REL OMXIL */
+#define ICB_SRC_Y	5
+#define ICB_SRC_C	6
+#endif /* defined(HAVE_SHMERAM) */
+#endif /* defined(HAVE_SHVIO) */
 };
 
 struct _GstDfbVideoSinkClass {

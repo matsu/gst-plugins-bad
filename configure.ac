@@ -819,6 +819,12 @@ AG_GST_CHECK_FEATURE(DIRECTFB, [directfb], dfbvideosink , [
   ])
   if test $HAVE_SHVIO = "yes"; then
     AC_DEFINE(HAVE_SHVIO, 1, [Define if we have libshvio])
+    PKG_CHECK_MODULES(SHMERAM, meram >= 0.9.2, HAVE_SHMERAM="yes", [
+      HAVE_SHMERAM="no"
+    ])
+    if test $HAVE_SHMERAM = "yes"; then
+      AC_DEFINE(HAVE_SHMERAM, 1, [Define if we have libshmeram])
+    fi
   fi
 ])
 
