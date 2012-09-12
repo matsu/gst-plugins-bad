@@ -1517,17 +1517,20 @@ gst_dfbvideosink_setcaps (GstBaseSink * bsink, GstCaps * caps)
 {
   GstDfbVideoSink *dfbvideosink;
   GstStructure *structure;
-  gboolean res, result = FALSE;
+  gboolean res, interlaced, result = FALSE;
+  const gchar *layout = NULL;
   gint video_width, video_height;
   const GValue *framerate;
   DFBSurfacePixelFormat pixel_format = DSPF_UNKNOWN;
 #if defined(HAVE_SHVIO) && defined(HAVE_SHMERAM)
+  IDirectFBSurface *surface;
   gint stride;
   gint sliceheight;
   gint tilewidth;
   gulong addr;
   gulong val;
   gulong sbsize;
+  gpointer data;
 #endif
 
   dfbvideosink = GST_DFBVIDEOSINK (bsink);
@@ -1557,6 +1560,15 @@ gst_dfbvideosink_setcaps (GstBaseSink * bsink, GstCaps * caps)
   if (!gst_structure_get_int (structure, "chroma_byte_offset",
           &dfbvideosink->chroma_byte_offset))
     GST_LOG_OBJECT (dfbvideosink, "can't get chroma_byte_offset from caps");
+
+  if (gst_structure_get_boolean (structure, "interlaced", &interlaced) &&
+      (interlaced == TRUE) &&
+      ((layout = gst_structure_get_string (structure, "field-layout")) != NULL)
+      && (strcmp (layout, "sequential") == 0)) {
+    dfbvideosink->interlaced = TRUE;
+  } else {
+    dfbvideosink->interlaced = FALSE;
+  }
 
 #if defined(HAVE_SHMERAM)
   stride =
@@ -1903,14 +1915,14 @@ gst_dfbvideosink_center_rect (GstVideoRectangle src, GstVideoRectangle dst,
 #if defined(HAVE_SHVIO)
 static GstFlowReturn
 gst_dfbvideosink_shvio_stretchblit (GstDfbVideoSink * dfbvideosink,
-    GstBuffer * buf, GstVideoRectangle * src, DFBSurfacePixelFormat src_format,
-    gint src_pitch, guint8 * data, GstVideoRectangle * dst,
-    DFBSurfacePixelFormat dst_format, gint dest_pitch)
+    guint8 * src_addry, guint8 * src_addrc, GstVideoRectangle * src,
+    DFBSurfacePixelFormat src_format, gint src_pitch, guint8 * dest_addr,
+    GstVideoRectangle * dst, DFBSurfacePixelFormat dst_format, gint dest_pitch)
 {
   struct ren_vid_surface viosurface[2];
   int ret;
 #if defined(HAVE_SHMERAM)
-  gulong phys[2];
+  gulong phys[1];
   MERAM_REG *regs;
 #endif /* defined(HAVE_SHMERAM) */
 
@@ -1927,7 +1939,7 @@ gst_dfbvideosink_shvio_stretchblit (GstDfbVideoSink * dfbvideosink,
     return GST_FLOW_NOT_SUPPORTED;
   }
 #if defined(HAVE_SHMERAM)
-  phys[SRC] = uiomux_all_virt_to_phys (GST_BUFFER_DATA (buf));
+  phys[SRC] = uiomux_all_virt_to_phys (src_addry);
   if (phys[SRC]) {
     viosurface[SRC].pitch = 0;
     viosurface[SRC].bpitchy = 4096;
@@ -1942,7 +1954,7 @@ gst_dfbvideosink_shvio_stretchblit (GstDfbVideoSink * dfbvideosink,
 
     if (dfbvideosink->icbc[SRC]) {
       meram_write_icb (dfbvideosink->meram, dfbvideosink->icbc[SRC],
-          MExxSSARA, phys[SRC] + dfbvideosink->chroma_byte_offset);
+          MExxSSARA, uiomux_all_virt_to_phys (src_addrc));
       viosurface[SRC].pc = (void *)
           meram_get_icb_address (dfbvideosink->meram, dfbvideosink->icbc[SRC],
           0);
@@ -1965,15 +1977,11 @@ gst_dfbvideosink_shvio_stretchblit (GstDfbVideoSink * dfbvideosink,
     viosurface[SRC].bpitchc = 0;
     viosurface[SRC].bpitcha = 0;
 
-    viosurface[SRC].py = GST_BUFFER_DATA (buf);
+    viosurface[SRC].py = src_addry;
 
     if (is_ycbcr (viosurface[SRC].format)
         && viosurface[SRC].format != REN_UYVY)
-      viosurface[SRC].pc = (void *) (
-          (dfbvideosink->chroma_byte_offset >=
-              0) ? (gulong) viosurface[SRC].py +
-          dfbvideosink->chroma_byte_offset : (gulong) viosurface[SRC].py +
-          viosurface[SRC].pitch * src->h);
+      viosurface[SRC].pc = src_addrc;
     else
       viosurface[SRC].pc = 0;
 #if defined(HAVE_SHMERAM)
@@ -1999,7 +2007,7 @@ gst_dfbvideosink_shvio_stretchblit (GstDfbVideoSink * dfbvideosink,
   viosurface[DST].bpitchy = 0;
   viosurface[DST].bpitchc = 0;
   viosurface[DST].bpitcha = 0;
-  viosurface[DST].py = data;
+  viosurface[DST].py = dest_addr;
   if (is_ycbcr (viosurface[DST].format)
       && viosurface[SRC].format != REN_UYVY)
     viosurface[DST].pc = (void *) (
@@ -2157,9 +2165,42 @@ gst_dfbvideosink_show_frame (GstBaseSink * bsink, GstBuffer * buf)
       ret = GST_FLOW_UNEXPECTED;
       goto beach;
     } else {
+      guint8 *src_datay, *src_datac;
+      if (dfbvideosink->interlaced) {
+        gint is_src_odd, is_dst_odd;
+
+        /* Render top field at first */
+        src_datay = GST_BUFFER_DATA (buf);
+        src_datac = src_datay + dfbvideosink->chroma_byte_offset;
+        is_src_odd = src.h % 2;
+        src.h /= 2;
+        is_dst_odd = result.h % 2;
+        result.h /= 2;
+        ret =
+            gst_dfbvideosink_shvio_stretchblit (dfbvideosink, src_datay,
+            src_datac, &src, src_format, src_pitch, data, &result, dst_format,
+            dest_pitch * 2);
+        if (ret != GST_FLOW_OK)
+          GST_WARNING_OBJECT (dfbvideosink,
+              "failed bliting an interlaced image with VIO");
+
+        /* Then, prepare for rendering the bottom field */
+        src.h += is_src_odd;
+        result.h += is_dst_odd;
+        src_datay += dfbvideosink->chroma_byte_offset / 2;
+        src_datac = src_datay + dfbvideosink->chroma_byte_offset * 3 / 4;
+        data += dest_pitch;     /* step into the next line */
+        dest_pitch *= 2;        /* skip 1 line per rendering */
+      } else {
+        src_datay = GST_BUFFER_DATA (buf);
+        src_datac = src_datay + dfbvideosink->chroma_byte_offset;
+      }
       ret =
-          gst_dfbvideosink_shvio_stretchblit (dfbvideosink, buf, &src,
-          src_format, src_pitch, data, &result, dst_format, dest_pitch);
+          gst_dfbvideosink_shvio_stretchblit (dfbvideosink, src_datay,
+          src_datac, &src, src_format, src_pitch, data, &result, dst_format,
+          dest_pitch);
+      if (ret != GST_FLOW_OK)
+        GST_WARNING_OBJECT (dfbvideosink, "failed bliting an image with VIO");
       if ((ret != GST_FLOW_OK) && (dst_format == src_format)) {
 #endif /* defined(HAVE_SHVIO) */
         /* Write each line respecting subsurface pitch */
@@ -2884,6 +2925,7 @@ gst_dfbvideosink_init (GstDfbVideoSink * dfbvideosink)
 #if defined(HAVE_SHVIO)
   dfbvideosink->rowstride = -1;
   dfbvideosink->chroma_byte_offset = -1;
+  dfbvideosink->interlaced = FALSE;
 #endif
 
   dfbvideosink->dfb = NULL;

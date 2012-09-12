@@ -135,6 +135,7 @@ struct _GstDfbVideoSink {
   SHVIO *vio;
   gint rowstride;
   gint chroma_byte_offset;
+  gboolean interlaced;
 #if defined(HAVE_SHMERAM)
   MERAM *meram;
   ICB *icby[1];		/* TODO: add an entry for writeback cache */
