@@ -2858,13 +2858,14 @@ gst_dfbvideosink_handle_sink_query (GstPad * pad, GstQuery * query)
 {
   gboolean res = FALSE;
   GstDfbVideoSink *dfbvideosink;
-  GstQueryType query_type_stride;
+  GstQueryType query_type_stride, query_type_tladdr;
 
   dfbvideosink = GST_DFBVIDEOSINK (gst_pad_get_parent (pad));
 
   GST_LOG_OBJECT (dfbvideosink, "%s query", GST_QUERY_TYPE_NAME (query));
 
   query_type_stride = gst_query_type_get_by_nick ("stride-supported");
+  query_type_tladdr = gst_query_type_get_by_nick ("tladdressing-supported");
   if (query_type_stride == GST_QUERY_TYPE (query)) {
     GstStructure *structure = gst_query_get_structure (query);
 #if defined(HAVE_SHVIO)
@@ -2873,6 +2874,16 @@ gst_dfbvideosink_handle_sink_query (GstPad * pad, GstQuery * query)
 #else
     gst_structure_set (structure, "stride-supported", G_TYPE_BOOLEAN, FALSE,
         NULL);
+#endif
+    res = TRUE;
+  } else if (query_type_tladdr == GST_QUERY_TYPE (query)) {
+    GstStructure *structure = gst_query_get_structure (query);
+#if defined(HAVE_SHVIO) && defined(HAVE_SHMERAM)
+    gst_structure_set (structure, "tladdressing-supported", G_TYPE_BOOLEAN,
+        TRUE, NULL);
+#else
+    gst_structure_set (structure, "tladdressing-supported", G_TYPE_BOOLEAN,
+        FALSE, NULL);
 #endif
     res = TRUE;
   } else {
