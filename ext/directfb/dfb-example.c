@@ -1,8 +1,8 @@
 
-#include <directfb.h>
 #include <stdio.h>
 #include <gst/gst.h>
 #include <libgen.h>
+#include <directfb.h>
 
 static IDirectFB *dfb = NULL;
 static IDirectFBSurface *primary = NULL;
