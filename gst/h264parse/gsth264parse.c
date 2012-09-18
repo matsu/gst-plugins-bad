@@ -2013,6 +2013,7 @@ gst_h264_parse_chain_forward (GstH264Parse * h264parse, gboolean discont,
     gint avail;
     gboolean delta_unit = FALSE;
     gboolean got_frame = FALSE;
+    gboolean is_config_nal = FALSE;
 
     avail = gst_adapter_available (h264parse->adapter);
     if (avail < h264parse->nal_length_size + 2)
@@ -2134,10 +2135,12 @@ gst_h264_parse_chain_forward (GstH264Parse * h264parse, gboolean discont,
         case NAL_SPS:
           GST_DEBUG_OBJECT (h264parse, "we have an SPS NAL");
           gst_nal_decode_sps (h264parse, &bs);
+	  is_config_nal = TRUE;
           break;
         case NAL_PPS:
           GST_DEBUG_OBJECT (h264parse, "we have a PPS NAL");
           gst_nal_decode_pps (h264parse, &bs);
+	  is_config_nal = TRUE;
           break;
         case NAL_AU_DELIMITER:
           GST_DEBUG_OBJECT (h264parse, "we have an access unit delimiter.");
@@ -2303,6 +2306,9 @@ gst_h264_parse_chain_forward (GstH264Parse * h264parse, gboolean discont,
         GST_BUFFER_FLAG_SET (outbuf, GST_BUFFER_FLAG_DELTA_UNIT);
       else
         GST_BUFFER_FLAG_UNSET (outbuf, GST_BUFFER_FLAG_DELTA_UNIT);
+
+      if (is_config_nal)
+        GST_BUFFER_FLAG_SET (outbuf, GST_BUFFER_FLAG_PREROLL);
 
       res = gst_h264_parse_push_buffer (h264parse, outbuf);
     } else {
