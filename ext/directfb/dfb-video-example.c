@@ -272,7 +272,8 @@ channel_cb (GIOChannel * source, GIOCondition condition, gpointer data)
 
     cur_time += atoi (param) * GST_SECOND;
 
-    if (!gst_element_seek (pipeline, 1.0, GST_FORMAT_TIME,
+    if (!gst_element_seek (pipeline, MIN (1.0, playback_rate),
+            GST_FORMAT_TIME,
             seek_flags,
             GST_SEEK_TYPE_SET, cur_time,
             GST_SEEK_TYPE_NONE, GST_CLOCK_TIME_NONE)) {
