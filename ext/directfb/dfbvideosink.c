@@ -2011,7 +2011,7 @@ gst_dfbvideosink_shvio_stretchblit (GstDfbVideoSink * dfbvideosink,
   } else {
 #endif /* defined(HAVE_SHMERAM) */
     if (dfbvideosink->rowstride >= 0)
-      viosurface[SRC].pitch = dfbvideosink->rowstride;
+      viosurface[SRC].pitch = byte2pixel (dfbvideosink->rowstride, src_format);
     else {
       viosurface[SRC].pitch = byte2pixel (src_pitch, src_format);
     }
