@@ -1988,6 +1988,8 @@ gst_dfbvideosink_shvio_stretchblit (GstDfbVideoSink * dfbvideosink,
 #if defined(HAVE_SHMERAM)
   phys[SRC] = uiomux_all_virt_to_phys (src_addry);
   if (phys[SRC]) {
+    gulong py_frac = phys[SRC] & 0x0000000f;
+
     viosurface[SRC].pitch = 0;
     viosurface[SRC].bpitchy = 4096;
     viosurface[SRC].bpitchc = 4096;
@@ -1996,15 +1998,20 @@ gst_dfbvideosink_shvio_stretchblit (GstDfbVideoSink * dfbvideosink,
     meram_write_icb (dfbvideosink->meram, dfbvideosink->icby[SRC], MExxSSARA,
         phys[SRC]);
     viosurface[SRC].py =
-        (void *) meram_get_icb_address (dfbvideosink->meram,
-        dfbvideosink->icby[SRC], 0);
+        (void *) (meram_get_icb_address (dfbvideosink->meram,
+            dfbvideosink->icby[SRC], 0) + py_frac);
 
     if (dfbvideosink->icbc[SRC]) {
+      gulong physc, pc_frac;
+
+      physc = uiomux_all_virt_to_phys (src_addrc);
+      pc_frac = physc & 0x0000000f;
+
       meram_write_icb (dfbvideosink->meram, dfbvideosink->icbc[SRC],
-          MExxSSARA, uiomux_all_virt_to_phys (src_addrc));
+          MExxSSARA, physc);
       viosurface[SRC].pc = (void *)
-          meram_get_icb_address (dfbvideosink->meram, dfbvideosink->icbc[SRC],
-          0);
+          (meram_get_icb_address (dfbvideosink->meram, dfbvideosink->icbc[SRC],
+              0) + pc_frac);
     } else {
       viosurface[SRC].pc = 0;
     }
