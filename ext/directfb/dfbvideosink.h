@@ -136,6 +136,7 @@ struct _GstDfbVideoSink {
   gint rowstride;
   gint chroma_byte_offset;
   gboolean interlaced;
+  gint next_field_offset;
 #if defined(HAVE_SHMERAM)
   MERAM *meram;
   ICB *icby[2];

@@ -1604,6 +1604,12 @@ gst_dfbvideosink_setcaps (GstBaseSink * bsink, GstCaps * caps)
     dfbvideosink->interlaced = FALSE;
   }
 
+  if (!gst_structure_get_int (structure, "next_field_offset",
+          &dfbvideosink->next_field_offset) && dfbvideosink->interlaced) {
+    GST_ERROR_OBJECT (dfbvideosink,
+        "failed to get next-field-offset from caps in despite of interlaced being set");
+    goto beach;
+  }
 #if defined(HAVE_SHMERAM)
   stride =
       (dfbvideosink->rowstride >
@@ -2318,8 +2324,8 @@ gst_dfbvideosink_show_frame (GstBaseSink * bsink, GstBuffer * buf)
       /* Then, prepare for rendering the bottom field */
       src.h += is_src_odd;
       result.h += is_dst_odd;
-      src_datay += dfbvideosink->chroma_byte_offset / 2;
-      src_datac = src_datay + dfbvideosink->chroma_byte_offset * 3 / 4;
+      src_datay += dfbvideosink->next_field_offset;
+      src_datac += dfbvideosink->next_field_offset / 2;
       data += dest_pitch;       /* step into the next line */
       dest_pitch *= 2;          /* skip 1 line per rendering */
     } else {
@@ -3067,6 +3073,7 @@ gst_dfbvideosink_init (GstDfbVideoSink * dfbvideosink)
   dfbvideosink->rowstride = -1;
   dfbvideosink->chroma_byte_offset = -1;
   dfbvideosink->interlaced = FALSE;
+  dfbvideosink->next_field_offset = -1;
 #endif
 
   dfbvideosink->dfb = NULL;
