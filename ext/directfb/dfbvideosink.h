@@ -146,6 +146,8 @@ struct _GstDfbVideoSink {
 #define ICB_SRC_C	6
 #define ICB_DST_Y	7
 #define ICB_DST_C	8
+  gint tile_boundary_y_offset;
+  gint tile_boundary_c_offset;
 #endif /* defined(HAVE_SHMERAM) */
 #endif /* defined(HAVE_SHVIO) */
 };

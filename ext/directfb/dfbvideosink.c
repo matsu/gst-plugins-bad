@@ -1611,6 +1611,18 @@ gst_dfbvideosink_setcaps (GstBaseSink * bsink, GstCaps * caps)
     goto beach;
   }
 #if defined(HAVE_SHMERAM)
+  if (!gst_structure_get_int (structure, "tile_boundary_y_offset",
+          &dfbvideosink->tile_boundary_y_offset)) {
+    dfbvideosink->tile_boundary_y_offset = 0;
+    GST_LOG_OBJECT (dfbvideosink, "can't get tile_boundary_y_offset from caps");
+  }
+
+  if (!gst_structure_get_int (structure, "tile_boundary_c_offset",
+          &dfbvideosink->tile_boundary_c_offset)) {
+    dfbvideosink->tile_boundary_c_offset = 0;
+    GST_LOG_OBJECT (dfbvideosink, "can't get tile_boundary_c_offset from caps");
+  }
+
   stride =
       (dfbvideosink->rowstride >
       0) ? dfbvideosink->rowstride : pixel2byte (video_width, pixel_format);
@@ -2002,10 +2014,13 @@ gst_dfbvideosink_shvio_stretchblit (GstDfbVideoSink * dfbvideosink,
     viosurface[SRC].bpitcha = 4096;
 
     meram_write_icb (dfbvideosink->meram, dfbvideosink->icby[SRC], MExxSSARA,
-        phys[SRC]);
+        phys[SRC] -
+        dfbvideosink->rowstride * dfbvideosink->tile_boundary_y_offset);
     viosurface[SRC].py =
         (void *) (meram_get_icb_address (dfbvideosink->meram,
-            dfbvideosink->icby[SRC], 0) + py_frac);
+            dfbvideosink->icby[SRC],
+            0) + py_frac +
+        viosurface[SRC].bpitchy * dfbvideosink->tile_boundary_y_offset);
 
     if (dfbvideosink->icbc[SRC]) {
       gulong physc, pc_frac;
@@ -2013,11 +2028,14 @@ gst_dfbvideosink_shvio_stretchblit (GstDfbVideoSink * dfbvideosink,
       physc = uiomux_all_virt_to_phys (src_addrc);
       pc_frac = physc & 0x0000000f;
 
-      meram_write_icb (dfbvideosink->meram, dfbvideosink->icbc[SRC],
-          MExxSSARA, physc);
-      viosurface[SRC].pc = (void *)
-          (meram_get_icb_address (dfbvideosink->meram, dfbvideosink->icbc[SRC],
-              0) + pc_frac);
+      meram_write_icb (dfbvideosink->meram, dfbvideosink->icbc[SRC], MExxSSARA,
+          physc -
+          dfbvideosink->rowstride * dfbvideosink->tile_boundary_c_offset);
+      viosurface[SRC].pc =
+          (void *) (meram_get_icb_address (dfbvideosink->meram,
+              dfbvideosink->icbc[SRC],
+              0) + pc_frac +
+          viosurface[SRC].bpitchc * dfbvideosink->tile_boundary_c_offset);
     } else {
       viosurface[SRC].pc = 0;
     }
