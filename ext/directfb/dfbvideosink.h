@@ -138,11 +138,13 @@ struct _GstDfbVideoSink {
   gboolean interlaced;
 #if defined(HAVE_SHMERAM)
   MERAM *meram;
-  ICB *icby[1];		/* TODO: add an entry for writeback cache */
-  ICB *icbc[1];		/* TODO: add an entry for writeback cache */
+  ICB *icby[2];
+  ICB *icbc[2];
 /* NOTE: ICB #0 to #4 may be used by REL OMXIL */
 #define ICB_SRC_Y	5
 #define ICB_SRC_C	6
+#define ICB_DST_Y	7
+#define ICB_DST_C	8
 #endif /* defined(HAVE_SHMERAM) */
 #endif /* defined(HAVE_SHVIO) */
 };
