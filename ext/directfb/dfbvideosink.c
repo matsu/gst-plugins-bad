@@ -1649,7 +1649,8 @@ gst_dfbvideosink_setcaps (GstBaseSink * bsink, GstCaps * caps)
       0xa0000701);
   meram_write_icb (dfbvideosink->meram, dfbvideosink->icby[SRC], MExxSSARB, 0);
   meram_write_icb (dfbvideosink->meram, dfbvideosink->icby[SRC], MExxBSIZE,
-      (((sliceheight - 1) & 0x1fff) << 16) | ((stride - 1) & 0x7fff));
+      (((sliceheight + dfbvideosink->tile_boundary_y_offset -
+                  1) & 0x1fff) << 16) | ((stride - 1) & 0x7fff));
   sbsize = stride & 0xfff0;
   switch (tilewidth) {
     case 16:
@@ -1691,7 +1692,8 @@ gst_dfbvideosink_setcaps (GstBaseSink * bsink, GstCaps * caps)
     meram_write_icb (dfbvideosink->meram, dfbvideosink->icbc[SRC], MExxCTRL,
         0xa0200701);
     meram_write_icb (dfbvideosink->meram, dfbvideosink->icbc[SRC], MExxBSIZE,
-        (((sliceheight / 2 - 1) & 0x1fff) << 16) | ((stride - 1) & 0x7fff));
+        (((sliceheight / 2 + dfbvideosink->tile_boundary_c_offset -
+                    1) & 0x1fff) << 16) | ((stride - 1) & 0x7fff));
     meram_write_icb (dfbvideosink->meram, dfbvideosink->icbc[SRC], MExxSBSIZE,
         sbsize);
     meram_write_icb (dfbvideosink->meram, dfbvideosink->icbc[SRC], MExxSSARB,
