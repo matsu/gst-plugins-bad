@@ -5,7 +5,7 @@
 
 static IDirectFB *dfb = NULL;
 static IDirectFBSurface *primary = NULL;
-static GstElement *pipeline;
+static GstElement *pipeline, *videocrop;
 static struct timeval prev_tv;
 static gdouble playback_rate = 1.0;
 static gint64 position;
@@ -38,6 +38,10 @@ usage (char *cmd)
   printf ("  -i		ignore image's aspect ratio\n");
   printf ("  -f		specify input filename\n");
   printf ("  -q		do quick seeking without accurate positioning\n");
+  printf ("  -T		top of cropped image\n");
+  printf ("  -B		bottom of cropped image\n");
+  printf ("  -L		left of cropped image\n");
+  printf ("  -R		right of cropped image\n");
 }
 
 static void
@@ -98,7 +102,11 @@ create_video_pipeline (GstPad * pad, gpointer data)
     gst_bin_add_many (GST_BIN (pipeline), parser, decoder, queue, NULL);
     sinkpad = gst_element_get_static_pad (queue, "sink");
     gst_pad_link (pad, sinkpad);
-    gst_element_link_many (queue, parser, decoder, peer_element, NULL);
+    if (videocrop)
+      gst_element_link_many (queue, parser, decoder, videocrop, peer_element,
+          NULL);
+    else
+      gst_element_link_many (queue, parser, decoder, peer_element, NULL);
     gst_object_unref (sinkpad);
 
     gst_element_set_state (queue, GST_STATE_PLAYING);
@@ -108,7 +116,10 @@ create_video_pipeline (GstPad * pad, gpointer data)
     gst_bin_add_many (GST_BIN (pipeline), decoder, queue, NULL);
     sinkpad = gst_element_get_static_pad (queue, "sink");
     gst_pad_link (pad, sinkpad);
-    gst_element_link_many (queue, decoder, peer_element, NULL);
+    if (videocrop)
+      gst_element_link_many (queue, decoder, videocrop, peer_element, NULL);
+    else
+      gst_element_link_many (queue, decoder, peer_element, NULL);
     gst_object_unref (sinkpad);
 
     gst_element_set_state (queue, GST_STATE_PLAYING);
@@ -442,6 +453,7 @@ main (int argc, char *argv[])
   char *in_file = NULL, *ext;
   struct sigaction action;
   GIOChannel *chan;
+  int top, bottom, left, right;
 
   if ((argc < 3) || (strcmp (argv[1], "--help") == 0)) {
     usage (argv[0]);
@@ -456,9 +468,10 @@ main (int argc, char *argv[])
 
   memset (&rect, 0, sizeof (rect));
   layer_id = 0;
+  top = bottom = left = right = 0;
 
   opterr = 0;
-  while ((opt = getopt (argc, argv, "x:y:w:h:l:o:if:q")) != -1) {
+  while ((opt = getopt (argc, argv, "x:y:w:h:l:o:if:qT:B:L:R:")) != -1) {
     switch (opt) {
       case 'x':
         rect.x = atoi (optarg);
@@ -486,6 +499,18 @@ main (int argc, char *argv[])
         break;
       case 'q':
         is_quick_seek = TRUE;
+        break;
+      case 'T':
+        top = atoi (optarg);
+        break;
+      case 'B':
+        bottom = atoi (optarg);
+        break;
+      case 'L':
+        left = atoi (optarg);
+        break;
+      case 'R':
+        right = atoi (optarg);
         break;
       default:
         usage (argv[0]);
@@ -554,7 +579,19 @@ main (int argc, char *argv[])
       is_keep_aspect, "window-width", rect.w, "window-height", rect.h,
       "window-x", rect.x, "window-y", rect.y, NULL);
 
-  gst_bin_add_many (GST_BIN (pipeline), src, demuxer, sink, NULL);
+  if (top || bottom || left || right) {
+    videocrop = gst_element_factory_make ("videocrop", NULL);
+    g_assert (videocrop);
+
+    g_object_set (videocrop, "top", top, "bottom", bottom, "left", left,
+        "right", right, NULL);
+  } else
+    videocrop = NULL;
+
+  if (videocrop)
+    gst_bin_add_many (GST_BIN (pipeline), src, demuxer, sink, videocrop, NULL);
+  else
+    gst_bin_add_many (GST_BIN (pipeline), src, demuxer, sink, NULL);
   if (!gst_element_link_many (src, demuxer, NULL))
     g_error ("Couldn't link src, crop, and sink");
 
