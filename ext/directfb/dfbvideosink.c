@@ -2220,9 +2220,6 @@ gst_dfbvideosink_show_frame (GstBaseSink * bsink, GstBuffer * buf)
 #if defined(HAVE_SHVIO)
     DFBSurfacePixelFormat src_format, dst_format;
     guint8 *src_datay, *src_datac;
-#if defined(HAVE_SHMERAM)
-    gint surplus;
-#endif
 #endif
 
     /* As we are not blitting no acceleration is possible. If the surface is
@@ -2259,31 +2256,8 @@ gst_dfbvideosink_show_frame (GstBaseSink * bsink, GstBuffer * buf)
       ret = GST_FLOW_UNEXPECTED;
       goto beach;
     }
-
     gst_dfbvideosink_center_rect (src, dfbvideosink->window, &result, TRUE,
         dfbvideosink->keep_ar);
-#if defined(HAVE_SHMERAM)
-    /* adjust the destination width
-       since MERAM imposes 16-byte alignment on it */
-    surplus = result.w % byte2pixel (16, dst_format);
-    if (surplus > 0) {
-      if (dfbvideosink->keep_ar) {
-        gint new_w, new_h;
-
-        /* tweak scaling factor */
-        new_w = result.w - surplus;
-        new_h = result.h * (gdouble) new_w / result.w;
-        result.x += surplus / 2;
-        result.y += (result.h - new_h) / 2;
-        result.w = new_w;
-        result.h = new_h;
-      } else {
-        /* cut off the surplus of width */
-        result.w -= surplus;
-        result.x += surplus / 2;
-      }
-    }
-#endif
 #else
     gst_video_sink_center_rect (src, dfbvideosink->window, &result, FALSE);
     result.x += dfbvideosink->window.x;
