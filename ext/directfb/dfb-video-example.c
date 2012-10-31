@@ -159,23 +159,20 @@ create_audio_pipeline (GstPad * pad)
     if (ver == 4 || ver == 2) { /* AAC */
       printf ("codec type video/mpeg mpegversion=%d\n", ver);
       decoder = gst_element_factory_make ("faad", NULL);
-      if (!decoder) {
-        printf ("faad plugin wasn't found\n");
-        return;
-      }
     } else if (ver == 1 && layer == 3) {        /* MP3 */
       printf ("codec type video/mpeg mpegversion=1\n");
       decoder = gst_element_factory_make ("mad", NULL);
-      if (!decoder) {
-        printf ("mad plugin wasn't found\n");
-        return;
-      }
     } else {
       printf ("unsupported format\n");
       return;
     }
   } else {
     printf ("%s isn't supported.\n", mime);
+    return;
+  }
+
+  if (!decoder) {
+    printf ("audio decoder plugin wasn't found\n");
     return;
   }
 
