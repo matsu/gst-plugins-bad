@@ -157,10 +157,10 @@ create_audio_pipeline (GstPad * pad)
     gst_structure_get_int (structure, "layer", &layer);
     /* This test to determine is based on "http://gstreamer.freedesktop.org/data/doc/gstreamer/head/pwg/html/section-types-definitions.html". */
     if (ver == 4 || ver == 2) { /* AAC */
-      printf ("codec type video/mpeg mpegversion=%d\n", ver);
+      printf ("codec type audio/mpeg mpegversion=%d\n", ver);
       decoder = gst_element_factory_make ("faad", NULL);
     } else if (ver == 1 && layer == 3) {        /* MP3 */
-      printf ("codec type video/mpeg mpegversion=1\n");
+      printf ("codec type audio/mpeg mpegversion=%d\n", ver);
       decoder = gst_element_factory_make ("mad", NULL);
     } else {
       printf ("unsupported format\n");
