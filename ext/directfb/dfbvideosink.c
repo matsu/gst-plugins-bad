@@ -2334,9 +2334,9 @@ gst_dfbvideosink_show_frame (GstBaseSink * bsink, GstBuffer * buf)
       src_datay = GST_BUFFER_DATA (buf);
       src_datac = src_datay + dfbvideosink->chroma_byte_offset;
       is_src_odd = src.h % 2;
-      src.h /= 2;
+      src.h = src.h / 2 + is_src_odd;
       is_dst_odd = result.h % 2;
-      result.h /= 2;
+      result.h = result.h / 2 + is_dst_odd;
       ret =
           gst_dfbvideosink_shvio_stretchblit (dfbvideosink, src_datay,
           src_datac, &src, src_format, src_pitch, data, &result, dst_format,
@@ -2346,8 +2346,8 @@ gst_dfbvideosink_show_frame (GstBaseSink * bsink, GstBuffer * buf)
             "failed bliting an interlaced image with VIO");
 
       /* Then, prepare for rendering the bottom field */
-      src.h += is_src_odd;
-      result.h += is_dst_odd;
+      src.h -= is_src_odd;
+      result.h -= is_dst_odd;
       src_datay += dfbvideosink->next_field_offset;
       src_datac += dfbvideosink->next_field_offset / 2;
       data += dest_pitch;       /* step into the next line */
