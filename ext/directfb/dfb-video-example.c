@@ -60,6 +60,7 @@ create_video_pipeline (GstPad * pad, gpointer data)
        a link to a peer pad. This route is passed when the state is changed. */
     sinkpad = gst_element_get_static_pad (queue, "sink");
     gst_pad_link (pad, sinkpad);
+    gst_object_unref (sinkpad);
     return;
   }
 
@@ -430,7 +431,11 @@ event_loop (GstElement * pipeline)
       default:
         break;
     }
+
+    gst_message_unref (message);
   }
+
+  gst_object_unref (bus);
 }
 
 int
@@ -617,6 +622,8 @@ main (int argc, char *argv[])
 
   /* Release elements and stop playback */
   gst_element_set_state (pipeline, GST_STATE_NULL);
+
+  gst_object_unref (pipeline);
 
   /* Release DirectFB context and surface */
   primary->Release (primary);

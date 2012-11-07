@@ -223,6 +223,8 @@ main (int argc, char *argv[])
   /* Free the main loop */
   g_main_loop_unref (loop);
 
+  gst_object_unref (pipeline);
+
   /* Release DirectFB context and surface */
   primary->Release (primary);
   layer->Release (layer);
