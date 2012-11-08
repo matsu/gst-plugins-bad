@@ -599,10 +599,6 @@ main (int argc, char *argv[])
 
   g_signal_connect (demuxer, "pad-added", G_CALLBACK (on_pad_added), sink);
 
-  primary->Clear (primary, 0x00, 0x00, 0x00, 0xFF);
-  primary->Flip (primary, NULL, DSFLIP_NONE);
-  primary->Clear (primary, 0x00, 0x00, 0x00, 0xFF);
-
   /* set signal handler */
   action.sa_handler = play_handler;
   sigaction (SIGQUIT, &action, NULL);
