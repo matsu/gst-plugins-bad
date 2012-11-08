@@ -2264,6 +2264,15 @@ gst_dfbvideosink_show_frame (GstBaseSink * bsink, GstBuffer * buf)
     result.y += dfbvideosink->window.y;
 #endif
 
+#if defined(HAVE_SHMERAM)
+    /*
+       NOTE: The following lock could be workaround to prevent race
+       condition in case that MERAM regions must be shared with other
+       modules. For R-CarE1 platform, this must be required.
+     */
+    ret = meram_lock_memory_block (dfbvideosink->meram, 0, 96);
+#endif /* defined(HAVE_SHMERAM) */
+
     res =
         surface->GetSubSurface (surface, (DFBRectangle *) (void *) &result,
         &dest);
@@ -2330,6 +2339,10 @@ gst_dfbvideosink_show_frame (GstBaseSink * bsink, GstBuffer * buf)
         gst_dfbvideosink_shvio_stretchblit (dfbvideosink, src_datay,
         src_datac, &src, src_format, src_pitch, data, &result, dst_format,
         dest_pitch);
+#if defined(HAVE_SHMERAM)
+    meram_unlock_memory_block (dfbvideosink->meram, 0, 96);
+#endif /* defined(HAVE_SHMERAM) */
+
     if (ret != GST_FLOW_OK)
       GST_WARNING_OBJECT (dfbvideosink, "failed bliting an image with VIO");
     if ((ret != GST_FLOW_OK) && (dst_format == src_format)) {
