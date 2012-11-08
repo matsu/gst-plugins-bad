@@ -193,6 +193,20 @@ gst_dfbvideosink_get_format_name (DFBSurfacePixelFormat format)
 }
 #endif /* GST_DISABLE_GST_DEBUG */
 
+static void
+gst_dfbvideosink_clear_surface (GstDfbVideoSink * dfbvideosink,
+    IDirectFBSurface * surface)
+{
+  surface->Clear (surface, 0x00, 0x00, 0x00, 0xFF);
+
+  if (dfbvideosink->backbuffer) {
+    dfbvideosink->vsync ? surface->Flip (surface, NULL, DSFLIP_ONSYNC) :
+        surface->Flip (surface, NULL, DSFLIP_NONE);
+
+    surface->Clear (surface, 0x00, 0x00, 0x00, 0xFF);
+  }
+}
+
 /* Creates miniobject and our internal surface */
 static GstDfbSurface *
 gst_dfbvideosink_surface_create (GstDfbVideoSink * dfbvideosink, GstCaps * caps,
@@ -255,7 +269,7 @@ gst_dfbvideosink_surface_create (GstDfbVideoSink * dfbvideosink, GstCaps * caps,
   }
 
   /* Clearing surface */
-  surface->surface->Clear (surface->surface, 0x00, 0x00, 0x00, 0xFF);
+  gst_dfbvideosink_clear_surface (dfbvideosink, surface->surface);
 
   /* Locking the surface to acquire the memory pointer */
   surface->surface->Lock (surface->surface, DSLF_WRITE, &data, &pitch);
@@ -1899,14 +1913,12 @@ gst_dfbvideosink_change_state (GstElement * element, GstStateChange transition)
       break;
     case GST_STATE_CHANGE_READY_TO_PAUSED:
       /* Blank surface if we have one */
-      if (dfbvideosink->ext_surface) {
-        dfbvideosink->ext_surface->Clear (dfbvideosink->ext_surface,
-            0x00, 0x00, 0x00, 0xFF);
-      }
-      if (dfbvideosink->primary) {
-        dfbvideosink->primary->Clear (dfbvideosink->primary, 0x00, 0x00,
-            0x00, 0xFF);
-      }
+      if (dfbvideosink->ext_surface)
+        gst_dfbvideosink_clear_surface (dfbvideosink,
+            dfbvideosink->ext_surface);
+
+      if (dfbvideosink->primary)
+        gst_dfbvideosink_clear_surface (dfbvideosink, dfbvideosink->primary);
       break;
     case GST_STATE_CHANGE_PAUSED_TO_PLAYING:
       dfbvideosink->frame_rendered = TRUE;
