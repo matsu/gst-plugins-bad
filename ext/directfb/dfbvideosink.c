@@ -655,6 +655,7 @@ gst_dfbvideosink_setup (GstDfbVideoSink * dfbvideosink)
   dfbvideosink->hw_scaling = FALSE;
   dfbvideosink->backbuffer = FALSE;
   dfbvideosink->pixel_format = DSPF_UNKNOWN;
+  dfbvideosink->require_clear_meram = true;
 
   /* If we do it all by ourself we create the DirectFB context, get the 
      primary layer and use a fullscreen configuration */
@@ -965,6 +966,7 @@ gst_dfbvideosink_setup (GstDfbVideoSink * dfbvideosink)
       dfbvideosink->icbc[DST] = NULL;
     }
   }
+
 #endif /* defined(HAVE_SHMERAM) */
 #endif /* defined(HAVE_SHVIO) */
 
@@ -2281,6 +2283,14 @@ gst_dfbvideosink_show_frame (GstBaseSink * bsink, GstBuffer * buf)
        modules. For R-CarE1 platform, this must be required.
      */
     ret = meram_lock_memory_block (dfbvideosink->meram, 0, 96);
+
+    /* FIXME: Any color formats should be supported. */
+    if ((dfbvideosink->require_clear_meram)
+        && (dfbvideosink->pixel_format == DSPF_ARGB)) {
+      meram_fill_memory_block (dfbvideosink->meram, 0x40, 16 /* KiB */ ,
+          0xff000000U /* black */ );
+      dfbvideosink->require_clear_meram = false;
+    }
 #endif /* defined(HAVE_SHMERAM) */
     g_mutex_unlock (dfbvideosink->window_lock);
 
@@ -2945,6 +2955,8 @@ gst_dfbvideosink_set_property (GObject * object, guint prop_id,
     case ARG_WINDOW_WIDTH:
       ivalue = g_value_get_int (value);
       g_mutex_lock (dfbvideosink->window_lock);
+      dfbvideosink->require_clear_meram = ((ivalue & 0x03)
+          || ((dfbvideosink->window.x + ivalue) & 0x03));
       dfbvideosink->window.w = ivalue;
       g_mutex_unlock (dfbvideosink->window_lock);
       break;
@@ -2956,6 +2968,8 @@ gst_dfbvideosink_set_property (GObject * object, guint prop_id,
     case ARG_WINDOW_X_OFFSET:
       ivalue = g_value_get_int (value);
       g_mutex_lock (dfbvideosink->window_lock);
+      dfbvideosink->require_clear_meram = ((ivalue & 0x03)
+          || ((dfbvideosink->window.w + ivalue) & 0x03));
       dfbvideosink->window.x = ivalue;
       g_mutex_unlock (dfbvideosink->window_lock);
       break;

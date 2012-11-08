@@ -133,6 +133,8 @@ struct _GstDfbVideoSink {
     DST = 1,
   };
 
+  gboolean require_clear_meram;
+
   SHVIO *vio;
   gint rowstride;
   gint chroma_byte_offset;
