@@ -71,6 +71,16 @@ struct _GstDfbVMode {
   gint bpp;
 };
 
+typedef struct _GstDfbBgColor GstDfbBgColor;
+
+struct _GstDfbBgColor
+{
+  guint8 red;
+  guint8 green;
+  guint8 blue;
+  guint8 alpha;
+};
+
 /**
  * GstDfbVideoSink:
  *
@@ -149,6 +159,9 @@ struct _GstDfbVideoSink {
   gint tile_boundary_c_offset;
 #endif /* defined(HAVE_SHMERAM) */
 #endif /* defined(HAVE_SHVIO) */
+
+  /* color to fill a surface at the initialization */
+  GstDfbBgColor bgcolor;
 };
 
 struct _GstDfbVideoSinkClass {
