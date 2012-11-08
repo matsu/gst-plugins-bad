@@ -886,6 +886,7 @@ gst_dfbvideosink_setup (GstDfbVideoSink * dfbvideosink)
 
   /* sanity check of size and geometry for the target window */
   surface->GetSize (surface, &width, &height);
+  g_mutex_lock (dfbvideosink->window_lock);
   if (dfbvideosink->window.w == 0)
     dfbvideosink->window.w = width;
   if (dfbvideosink->window.h == 0)
@@ -898,6 +899,7 @@ gst_dfbvideosink_setup (GstDfbVideoSink * dfbvideosink)
     GST_WARNING_OBJECT (dfbvideosink, "Too large y-offset, wrapped.");
     dfbvideosink->window.y %= height;
   }
+  g_mutex_unlock (dfbvideosink->window_lock);
 #if defined(HAVE_SHVIO)
   GST_DEBUG_OBJECT (dfbvideosink, "initializing libshvio");
   dfbvideosink->vio = shvio_open_named ("VIO");
@@ -2255,6 +2257,7 @@ gst_dfbvideosink_show_frame (GstBaseSink * bsink, GstBuffer * buf)
     }
 
     /* Center / Clip */
+    g_mutex_lock (dfbvideosink->window_lock);
 #if defined(HAVE_SHVIO)
     res = surface->GetPixelFormat (surface, &dst_format);
     if (res != DFB_OK) {
@@ -2279,6 +2282,7 @@ gst_dfbvideosink_show_frame (GstBaseSink * bsink, GstBuffer * buf)
      */
     ret = meram_lock_memory_block (dfbvideosink->meram, 0, 96);
 #endif /* defined(HAVE_SHMERAM) */
+    g_mutex_unlock (dfbvideosink->window_lock);
 
     res =
         surface->GetSubSurface (surface, (DFBRectangle *) (void *) &result,
@@ -2392,8 +2396,10 @@ gst_dfbvideosink_show_frame (GstBaseSink * bsink, GstBuffer * buf)
       surface->locked = FALSE;
     }
 
+    g_mutex_lock (dfbvideosink->window_lock);
     gst_dfbvideosink_center_rect (src, dfbvideosink->window, &result,
         dfbvideosink->hw_scaling, dfbvideosink->keep_ar);
+    g_mutex_unlock (dfbvideosink->window_lock);
 
     /* If we are not using Flip we wait for VSYNC before blit */
     if (!dfbvideosink->backbuffer && dfbvideosink->vsync) {
@@ -2888,6 +2894,7 @@ gst_dfbvideosink_set_property (GObject * object, guint prop_id,
     const GValue * value, GParamSpec * pspec)
 {
   GstDfbVideoSink *dfbvideosink;
+  gint ivalue;
 
   g_return_if_fail (GST_IS_DFBVIDEOSINK (object));
   dfbvideosink = GST_DFBVIDEOSINK (object);
@@ -2936,16 +2943,26 @@ gst_dfbvideosink_set_property (GObject * object, guint prop_id,
       dfbvideosink->keep_ar = g_value_get_boolean (value);
       break;
     case ARG_WINDOW_WIDTH:
-      dfbvideosink->window.w = g_value_get_int (value);
+      ivalue = g_value_get_int (value);
+      g_mutex_lock (dfbvideosink->window_lock);
+      dfbvideosink->window.w = ivalue;
+      g_mutex_unlock (dfbvideosink->window_lock);
       break;
     case ARG_WINDOW_HEIGHT:
+      g_mutex_lock (dfbvideosink->window_lock);
       dfbvideosink->window.h = g_value_get_int (value);
+      g_mutex_unlock (dfbvideosink->window_lock);
       break;
     case ARG_WINDOW_X_OFFSET:
-      dfbvideosink->window.x = g_value_get_int (value);
+      ivalue = g_value_get_int (value);
+      g_mutex_lock (dfbvideosink->window_lock);
+      dfbvideosink->window.x = ivalue;
+      g_mutex_unlock (dfbvideosink->window_lock);
       break;
     case ARG_WINDOW_Y_OFFSET:
+      g_mutex_lock (dfbvideosink->window_lock);
       dfbvideosink->window.y = g_value_get_int (value);
+      g_mutex_unlock (dfbvideosink->window_lock);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -3065,6 +3082,10 @@ gst_dfbvideosink_finalize (GObject * object)
     g_mutex_free (dfbvideosink->pool_lock);
     dfbvideosink->pool_lock = NULL;
   }
+  if (dfbvideosink->window_lock) {
+    g_mutex_free (dfbvideosink->window_lock);
+    dfbvideosink->window_lock = NULL;
+  }
   if (dfbvideosink->setup) {
     gst_dfbvideosink_cleanup (dfbvideosink);
   }
@@ -3099,6 +3120,7 @@ gst_dfbvideosink_init (GstDfbVideoSink * dfbvideosink)
   dfbvideosink->event_thread = NULL;
 
   dfbvideosink->ext_surface = NULL;
+  dfbvideosink->window_lock = g_mutex_new ();
   dfbvideosink->window.w = 0;
   dfbvideosink->window.h = 0;
   dfbvideosink->window.x = 0;

@@ -104,6 +104,7 @@ struct _GstDfbVideoSink {
   /* Embedded */
   IDirectFBSurface *ext_surface;
   GstVideoRectangle window;
+  GMutex *window_lock;
 
   DFBSurfacePixelFormat pixel_format;
   
