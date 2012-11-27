@@ -140,6 +140,8 @@ struct _GstH264Parse
 
   GstEvent *pending_segment;
   GList *pending_events;
+
+  GstClockTime prev_ts;
 };
 
 struct _GstH264ParseClass

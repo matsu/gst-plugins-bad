@@ -978,6 +978,8 @@ gst_h264_parse_init (GstH264Parse * h264parse, GstH264ParseClass * g_class)
   h264parse->format = GST_H264_PARSE_FORMAT_INPUT;
   h264parse->st_code_prefix = DEFAULT_ST_CODE_PREFIX;
 
+  h264parse->prev_ts = 0;
+
   gst_h264_parse_reset (h264parse);
 }
 
@@ -2391,6 +2393,7 @@ gst_h264_parse_queue_buffer (GstH264Parse * parse, GstBuffer * buffer)
   data = GST_BUFFER_DATA (buffer);
   size = GST_BUFFER_SIZE (buffer);
   timestamp = GST_BUFFER_TIMESTAMP (buffer);
+  parse->prev_ts = timestamp;
 
   link->slice = FALSE;
   link->i_frame = FALSE;
@@ -2679,6 +2682,26 @@ gst_h264_parse_sink_event (GstPad * pad, GstEvent * event)
       if (h264parse->segment.rate < 0.0) {
         gst_h264_parse_chain_reverse (h264parse, TRUE, NULL);
         gst_h264_parse_flush_decode (h264parse);
+      } else if (!h264parse->packetized) {
+        GstBuffer *buf;
+        guint8 *data;
+
+        /*
+         * Prepare for a buffer containing nal start code and push it
+         * to the parse function in order to flush a remaining nal
+         * in the adapter. 8 bytes should be allocated because the last
+         * 4byte will not be searched to look for the start code.
+         */
+        buf = gst_buffer_new_and_alloc (8);
+        data = GST_BUFFER_DATA (buf);
+        data[0] = 0x00;
+        data[1] = 0x00;
+        data[2] = 0x00;
+        data[3] = 0x01;
+        GST_BUFFER_TIMESTAMP (buf) = h264parse->prev_ts;
+
+        gst_h264_parse_chain_forward (h264parse, FALSE, buf);
+        gst_adapter_flush (h264parse->adapter, 8);
       }
       res = gst_pad_push_event (h264parse->srcpad, event);
       break;
