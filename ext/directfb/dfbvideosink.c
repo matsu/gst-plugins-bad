@@ -2257,8 +2257,9 @@ gst_dfbvideosink_show_frame (GstBaseSink * bsink, GstBuffer * buf)
     gint dest_pitch, src_pitch;
     GstStructure *structure;
     gint line;
+    DFBSurfacePixelFormat src_format;
 #if defined(HAVE_SHVIO)
-    DFBSurfacePixelFormat src_format, dst_format;
+    DFBSurfacePixelFormat dst_format;
     guint8 *src_datay, *src_datac;
 #endif
 
@@ -2348,7 +2349,6 @@ gst_dfbvideosink_show_frame (GstBaseSink * bsink, GstBuffer * buf)
     /* Source video rowbytes */
     src_pitch = GST_BUFFER_SIZE (buf) / src.h;
 
-#if defined(HAVE_SHVIO)
     src_format = gst_dfbvideosink_get_format_from_caps (GST_BUFFER_CAPS (buf));
     if (src_format == DSPF_UNKNOWN) {
       GST_WARNING_OBJECT (dfbvideosink,
@@ -2356,6 +2356,21 @@ gst_dfbvideosink_show_frame (GstBaseSink * bsink, GstBuffer * buf)
       return GST_FLOW_UNEXPECTED;
     }
 
+    /* calculate a Y plane stride when the color format is planar or
+       semi planar */
+    switch (src_format) {
+      case DSPF_NV12:
+      case DSPF_YV12:
+        src_pitch = src_pitch * 2 / 3;
+        break;
+      case DSPF_NV16:
+        src_pitch /= 2;
+        break;
+      default:
+        break;
+    }
+
+#if defined(HAVE_SHVIO)
     if (dfbvideosink->interlaced) {
       gint is_src_odd, is_dst_odd;
 
