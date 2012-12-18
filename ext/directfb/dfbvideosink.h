@@ -134,6 +134,7 @@ struct _GstDfbVideoSink {
   };
 
   gboolean require_clear_meram;
+  gint require_clear_surface;
 
   SHVIO *vio;
   gint rowstride;

@@ -197,6 +197,7 @@ static void
 gst_dfbvideosink_clear_surface (GstDfbVideoSink * dfbvideosink,
     IDirectFBSurface * surface)
 {
+  g_mutex_lock (dfbvideosink->window_lock);
   surface->Clear (surface, 0x00, 0x00, 0x00, 0xFF);
 
   if (dfbvideosink->backbuffer) {
@@ -205,6 +206,8 @@ gst_dfbvideosink_clear_surface (GstDfbVideoSink * dfbvideosink,
 
     surface->Clear (surface, 0x00, 0x00, 0x00, 0xFF);
   }
+  dfbvideosink->require_clear_surface = 0;
+  g_mutex_unlock (dfbvideosink->window_lock);
 }
 
 /* Creates miniobject and our internal surface */
@@ -897,6 +900,8 @@ gst_dfbvideosink_setup (GstDfbVideoSink * dfbvideosink)
         gst_dfbvideosink_get_format_name (dfbvideosink->pixel_format));
     surface = dfbvideosink->ext_surface;
   }
+
+  dfbvideosink->require_clear_surface = dfbvideosink->backbuffer ? 2 : 1;
 
   /* sanity check of size and geometry for the target window */
   surface->GetSize (surface, &width, &height);
@@ -1736,8 +1741,10 @@ gst_dfbvideosink_setcaps (GstBaseSink * bsink, GstCaps * caps)
       dfbvideosink->fps_d);
 
   g_mutex_lock (dfbvideosink->window_lock);
-  if (dfbvideosink->keep_ar)
+  if (dfbvideosink->keep_ar) {
     dfbvideosink->require_clear_meram = true;
+    dfbvideosink->require_clear_surface = dfbvideosink->backbuffer ? 2 : 1;
+  }
 #if defined(HAVE_SHVIO)
   if (!gst_structure_get_int (structure, "rowstride", &dfbvideosink->rowstride))
     GST_LOG_OBJECT (dfbvideosink, "can't get rowstride from caps");
@@ -2345,6 +2352,10 @@ gst_dfbvideosink_show_frame (GstBaseSink * bsink, GstBuffer * buf)
       dfbvideosink->require_clear_meram = false;
     }
 #endif /* defined(HAVE_SHMERAM) */
+    if (dfbvideosink->require_clear_surface > 0) {
+      surface->Clear (surface, 0x00, 0x00, 0x00, 0xFF);
+      dfbvideosink->require_clear_surface--;
+    }
     g_mutex_unlock (dfbvideosink->window_lock);
 
     res =
@@ -3026,11 +3037,13 @@ gst_dfbvideosink_set_property (GObject * object, guint prop_id,
           || ((dfbvideosink->window.x + ivalue) & 0x03)
           || dfbvideosink->keep_ar);
       dfbvideosink->window.w = ivalue;
+      dfbvideosink->require_clear_surface = dfbvideosink->backbuffer ? 2 : 1;
       g_mutex_unlock (dfbvideosink->window_lock);
       break;
     case ARG_WINDOW_HEIGHT:
       g_mutex_lock (dfbvideosink->window_lock);
       dfbvideosink->window.h = g_value_get_int (value);
+      dfbvideosink->require_clear_surface = dfbvideosink->backbuffer ? 2 : 1;
       g_mutex_unlock (dfbvideosink->window_lock);
       break;
     case ARG_WINDOW_X_OFFSET:
@@ -3040,11 +3053,13 @@ gst_dfbvideosink_set_property (GObject * object, guint prop_id,
           || ((dfbvideosink->window.w + ivalue) & 0x03)
           || dfbvideosink->keep_ar);
       dfbvideosink->window.x = ivalue;
+      dfbvideosink->require_clear_surface = dfbvideosink->backbuffer ? 2 : 1;
       g_mutex_unlock (dfbvideosink->window_lock);
       break;
     case ARG_WINDOW_Y_OFFSET:
       g_mutex_lock (dfbvideosink->window_lock);
       dfbvideosink->window.y = g_value_get_int (value);
+      dfbvideosink->require_clear_surface = dfbvideosink->backbuffer ? 2 : 1;
       g_mutex_unlock (dfbvideosink->window_lock);
       break;
     default:
