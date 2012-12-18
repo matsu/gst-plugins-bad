@@ -1735,6 +1735,9 @@ gst_dfbvideosink_setcaps (GstBaseSink * bsink, GstCaps * caps)
       gst_dfbvideosink_get_format_name (pixel_format), dfbvideosink->fps_n,
       dfbvideosink->fps_d);
 
+  g_mutex_lock (dfbvideosink->window_lock);
+  if (dfbvideosink->keep_ar)
+    dfbvideosink->require_clear_meram = true;
 #if defined(HAVE_SHVIO)
   if (!gst_structure_get_int (structure, "rowstride", &dfbvideosink->rowstride))
     GST_LOG_OBJECT (dfbvideosink, "can't get rowstride from caps");
@@ -1915,12 +1918,14 @@ gst_dfbvideosink_setcaps (GstBaseSink * bsink, GstCaps * caps)
   result = TRUE;
 
 beach:
+  g_mutex_unlock (dfbvideosink->window_lock);
   return result;
 
 /* ERRORS */
 wrong_aspect:
   {
     GST_INFO_OBJECT (dfbvideosink, "pixel aspect ratio does not match");
+    g_mutex_unlock (dfbvideosink->window_lock);
     return FALSE;
   }
 }
@@ -3018,7 +3023,8 @@ gst_dfbvideosink_set_property (GObject * object, guint prop_id,
       ivalue = g_value_get_int (value);
       g_mutex_lock (dfbvideosink->window_lock);
       dfbvideosink->require_clear_meram = ((ivalue & 0x03)
-          || ((dfbvideosink->window.x + ivalue) & 0x03));
+          || ((dfbvideosink->window.x + ivalue) & 0x03)
+          || dfbvideosink->keep_ar);
       dfbvideosink->window.w = ivalue;
       g_mutex_unlock (dfbvideosink->window_lock);
       break;
@@ -3031,7 +3037,8 @@ gst_dfbvideosink_set_property (GObject * object, guint prop_id,
       ivalue = g_value_get_int (value);
       g_mutex_lock (dfbvideosink->window_lock);
       dfbvideosink->require_clear_meram = ((ivalue & 0x03)
-          || ((dfbvideosink->window.w + ivalue) & 0x03));
+          || ((dfbvideosink->window.w + ivalue) & 0x03)
+          || dfbvideosink->keep_ar);
       dfbvideosink->window.x = ivalue;
       g_mutex_unlock (dfbvideosink->window_lock);
       break;
