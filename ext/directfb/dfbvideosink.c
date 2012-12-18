@@ -1058,12 +1058,22 @@ gst_dfbvideosink_cleanup (GstDfbVideoSink * dfbvideosink)
 #if defined(HAVE_SHMERAM)
     if (dfbvideosink->meram) {
       int i;
+      gulong addr;
+
       for (i = 0; i < 2; i++) {
         if (dfbvideosink->icby[i]) {
+          addr =
+              meram_get_icb_address (dfbvideosink->meram, dfbvideosink->icby[i],
+              0);
+          uiomux_unregister ((void *) addr);
           meram_unlock_icb (dfbvideosink->meram, dfbvideosink->icby[i]);
           dfbvideosink->icby[i] = NULL;
         }
         if (dfbvideosink->icbc[i]) {
+          addr =
+              meram_get_icb_address (dfbvideosink->meram, dfbvideosink->icbc[i],
+              0);
+          uiomux_unregister ((void *) addr);
           meram_unlock_icb (dfbvideosink->meram, dfbvideosink->icbc[i]);
           dfbvideosink->icbc[i] = NULL;
         }
@@ -1600,8 +1610,12 @@ gst_dfbvideosink_setup_meram (GstDfbVideoSink * dfbvideosink, GstCaps * caps,
 
   /* set up a readahead icb for Y plane
      4 lines / block-line, 8 lines held, 16 lines allocated */
-  if (dfbvideosink->icby[SRC])
+  if (dfbvideosink->icby[SRC]) {
+    addr =
+        meram_get_icb_address (dfbvideosink->meram, dfbvideosink->icby[SRC], 0);
+    uiomux_unregister ((void *) addr);
     meram_unlock_icb (dfbvideosink->meram, dfbvideosink->icby[SRC]);
+  }
   dfbvideosink->icby[SRC] = meram_lock_icb (dfbvideosink->meram, ICB_SRC_Y);
   meram_write_icb (dfbvideosink->meram, dfbvideosink->icby[SRC], MExxMCNF,
       0x010f0000);
@@ -1642,8 +1656,12 @@ gst_dfbvideosink_setup_meram (GstDfbVideoSink * dfbvideosink, GstCaps * caps,
 
   /* set up a readahead icb for CbCr plane
      4 lines / block-line, 8 lines held, 16 lines allocated */
-  if (dfbvideosink->icbc[SRC])
+  if (dfbvideosink->icbc[SRC]) {
+    addr =
+        meram_get_icb_address (dfbvideosink->meram, dfbvideosink->icbc[SRC], 0);
+    uiomux_unregister ((void *) addr);
     meram_unlock_icb (dfbvideosink->meram, dfbvideosink->icbc[SRC]);
+  }
   if (is_ycbcr (dfb2shvio_format (pixel_format)) && pixel_format != DSPF_UYVY) {
     dfbvideosink->icbc[SRC] = meram_lock_icb (dfbvideosink->meram, ICB_SRC_C);
     meram_write_icb (dfbvideosink->meram, dfbvideosink->icbc[SRC], MExxMCNF,
