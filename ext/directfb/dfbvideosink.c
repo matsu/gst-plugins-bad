@@ -132,7 +132,8 @@ enum
   ARG_BGCOLOR_RED,
   ARG_BGCOLOR_GREEN,
   ARG_BGCOLOR_BLUE,
-  ARG_BGCOLOR_ALPHA
+  ARG_BGCOLOR_ALPHA,
+  ARG_LAYER_MODE
 };
 
 static void gst_dfbvideosink_bufferpool_clear (GstDfbVideoSink * dfbvideosink);
@@ -786,8 +787,14 @@ gst_dfbvideosink_setup (GstDfbVideoSink * dfbvideosink)
         goto beach;
       }
 
-      ret = dfbvideosink->layer->SetCooperativeLevel (dfbvideosink->layer,
-          DLSCL_EXCLUSIVE);
+      if (dfbvideosink->layer_mode == LAYER_MODE_EXCLUSIVE ||
+          dfbvideosink->layer_mode == LAYER_MODE_ADMINISTRATIVE)
+        ret = dfbvideosink->layer->SetCooperativeLevel (dfbvideosink->layer,
+            dfbvideosink->layer_mode);
+      else {
+        GST_ERROR_OBJECT (dfbvideosink, "invalid layer cooperative level");
+        goto beach;
+      }
 
       if (ret != DFB_OK) {
         GST_WARNING_OBJECT (dfbvideosink, "failed setting display layer to "
@@ -3129,6 +3136,18 @@ gst_dfbvideosink_set_property (GObject * object, guint prop_id,
     case ARG_BGCOLOR_ALPHA:
       dfbvideosink->bgcolor.alpha = g_value_get_uint (value);
       break;
+    case ARG_LAYER_MODE:
+    {
+      const char *str = g_value_get_string (value);
+
+      if (strncmp (str, "administrative", strlen ("administrative")) == 0)
+        dfbvideosink->layer_mode = LAYER_MODE_ADMINISTRATIVE;
+      else if (strncmp (str, "exclusive", strlen ("exclusive")) == 0)
+        dfbvideosink->layer_mode = LAYER_MODE_EXCLUSIVE;
+      else
+        dfbvideosink->layer_mode = LAYER_MODE_INVALID;
+    }
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -3190,6 +3209,14 @@ gst_dfbvideosink_get_property (GObject * object, guint prop_id,
       break;
     case ARG_BGCOLOR_ALPHA:
       g_value_set_uint (value, dfbvideosink->bgcolor.alpha);
+      break;
+    case ARG_LAYER_MODE:
+      if (dfbvideosink->layer_mode == LAYER_MODE_EXCLUSIVE)
+        g_value_set_string (value, "exclusive");
+      else if (dfbvideosink->layer_mode == LAYER_MODE_ADMINISTRATIVE)
+        g_value_set_string (value, "administrative");
+      else
+        g_value_set_string (value, "invalid");
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -3326,6 +3353,8 @@ gst_dfbvideosink_init (GstDfbVideoSink * dfbvideosink)
   dfbvideosink->bgcolor.blue = 0x00;
   dfbvideosink->bgcolor.alpha = 0xFF;
 
+  dfbvideosink->layer_mode = LAYER_MODE_EXCLUSIVE;
+
   gst_pad_set_query_function (pad,
       GST_DEBUG_FUNCPTR (gst_dfbvideosink_handle_sink_query));
 }
@@ -3422,6 +3451,11 @@ gst_dfbvideosink_class_init (GstDfbVideoSinkClass * klass)
       g_param_spec_uint ("bgcolor-alpha", "Background color alpha value",
           "The alpha value to fill the target surface", 0,
           G_MAXUINT8, 0xFF, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+  g_object_class_install_property (gobject_class, ARG_LAYER_MODE,
+      g_param_spec_string ("layer-mode",
+          "The layer cooperative level (administrative or exclusive)",
+          "The cooperative level handling the access permission (When the cursor is required, you have to set to 'administrative')",
+          "exclusive", G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   gstelement_class->change_state = gst_dfbvideosink_change_state;
 

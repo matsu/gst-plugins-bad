@@ -24,6 +24,10 @@
 
 #include <directfb.h>
 
+#define LAYER_MODE_INVALID          -1
+#define LAYER_MODE_EXCLUSIVE        DLSCL_EXCLUSIVE
+#define LAYER_MODE_ADMINISTRATIVE   DLSCL_ADMINISTRATIVE
+
 #if defined(HAVE_SHVIO)
 #include <uiomux/uiomux.h>
 #include <shvio/shvio.h>
@@ -162,6 +166,8 @@ struct _GstDfbVideoSink {
 
   /* color to fill a surface at the initialization */
   GstDfbBgColor bgcolor;
+
+  gint layer_mode;
 };
 
 struct _GstDfbVideoSinkClass {
