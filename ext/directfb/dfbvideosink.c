@@ -886,7 +886,10 @@ gst_dfbvideosink_setup (GstDfbVideoSink * dfbvideosink)
       dfbvideosink->layer->SetBackgroundColor (dfbvideosink->layer,
           0x00, 0x00, 0x00, 0xFF);
 
-      dfbvideosink->layer->EnableCursor (dfbvideosink->layer, TRUE);
+#if (DIRECTFB_VER >= GST_DFBVIDEOSINK_VER (1,6,0))
+      if (dfbvideosink->layer_mode == LAYER_MODE_ADMINISTRATIVE)
+#endif
+        dfbvideosink->layer->EnableCursor (dfbvideosink->layer, TRUE);
 
       /* We prefer a double buffered primary surface */
       if (dfbvideosink->backbuffer) {
@@ -1091,7 +1094,10 @@ gst_dfbvideosink_cleanup (GstDfbVideoSink * dfbvideosink)
   }
 
   if (dfbvideosink->layer) {
-    dfbvideosink->layer->EnableCursor (dfbvideosink->layer, FALSE);
+#if (DIRECTFB_VER >= GST_DFBVIDEOSINK_VER (1,6,0))
+    if (dfbvideosink->layer_mode == LAYER_MODE_ADMINISTRATIVE)
+#endif
+      dfbvideosink->layer->EnableCursor (dfbvideosink->layer, FALSE);
     dfbvideosink->layer->Release (dfbvideosink->layer);
     dfbvideosink->layer = NULL;
   }

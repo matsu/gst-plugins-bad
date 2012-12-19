@@ -23,6 +23,10 @@
 #include <gst/video/gstvideosink.h>
 
 #include <directfb.h>
+#include <directfb_version.h>
+
+#define GST_DFBVIDEOSINK_VER(a,b,c) (((a) << 16) | ((b) << 8) | (c))
+#define DIRECTFB_VER GST_DFBVIDEOSINK_VER(DIRECTFB_MAJOR_VERSION,DIRECTFB_MINOR_VERSION,DIRECTFB_MICRO_VERSION)
 
 #define LAYER_MODE_INVALID          -1
 #define LAYER_MODE_EXCLUSIVE        DLSCL_EXCLUSIVE
