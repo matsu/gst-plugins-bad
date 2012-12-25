@@ -932,9 +932,11 @@ gst_dfbvideosink_setup (GstDfbVideoSink * dfbvideosink)
     gulong addr;
 
     dfbvideosink->meram = meram_open ();
-    if (dfbvideosink->meram == NULL)
+    if (dfbvideosink->meram == NULL) {
       GST_ELEMENT_ERROR (dfbvideosink, RESOURCE, OPEN_WRITE, (NULL),
           ("Failed initializing libshmeram"));
+      goto beach;
+    }
     regs = meram_lock_reg (dfbvideosink->meram);
     meram_read_reg (dfbvideosink->meram, regs, MEVCR1, &val);
     val |= 1 << 29;             /* use 0xc0000000-0xdfffffff */
