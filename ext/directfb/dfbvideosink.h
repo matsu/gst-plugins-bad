@@ -145,11 +145,6 @@ struct _GstDfbVideoSink {
   MERAM *meram;
   ICB *icby[2];
   ICB *icbc[2];
-/* NOTE: ICB #0 to #4 may be used by REL OMXIL */
-#define ICB_SRC_Y	5
-#define ICB_SRC_C	6
-#define ICB_DST_Y	7
-#define ICB_DST_C	8
   gint tile_boundary_y_offset;
   gint tile_boundary_c_offset;
 #endif /* defined(HAVE_SHMERAM) */
