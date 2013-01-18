@@ -196,15 +196,19 @@ create_audio_pipeline (GstPad * pad)
 static void
 on_pad_added (GstElement * element, GstPad * pad, gpointer data)
 {
+  gchar *name = gst_pad_get_name (pad);
+
   /* We can now link this pad with the gst-omx decoder or h264parse sink pad */
   printf ("Dynamic pad created, linking\n");
 
-  if (strcmp (gst_pad_get_name (pad), "video_00") == 0)
+  if (strcmp (name, "video_00") == 0)
     create_video_pipeline (pad, data);
-  else if (strcmp (gst_pad_get_name (pad), "audio_00") == 0)
+  else if (strcmp (name, "audio_00") == 0)
     create_audio_pipeline (pad);
   else
-    printf ("%s isn't acceptable.\n", gst_pad_get_name (pad));
+    printf ("%s isn't acceptable.\n", name);
+
+  g_free (name);
 }
 
 static void
