@@ -153,8 +153,6 @@ struct _GstDfbVideoSink {
     DST = 1,
   };
 
-  gboolean require_clear_meram;
-
   SHVIO *vio;
   gint rowstride;
   gint chroma_byte_offset;
@@ -166,6 +164,8 @@ struct _GstDfbVideoSink {
   ICB *icbc[2];
   gint tile_boundary_y_offset;
   gint tile_boundary_c_offset;
+
+  gboolean require_clear_meram;
 #endif /* defined(HAVE_SHMERAM) */
 #endif /* defined(HAVE_SHVIO) */
 

@@ -696,8 +696,9 @@ gst_dfbvideosink_setup (GstDfbVideoSink * dfbvideosink)
   dfbvideosink->hw_scaling = FALSE;
   dfbvideosink->backbuffer = FALSE;
   dfbvideosink->pixel_format = DSPF_UNKNOWN;
+#if defined(HAVE_SHMERAM)
   dfbvideosink->require_clear_meram = true;
-
+#endif
   /* If we do it all by ourself we create the DirectFB context, get the 
      primary layer and use a fullscreen configuration */
   if (!dfbvideosink->ext_surface) {
@@ -1809,7 +1810,9 @@ gst_dfbvideosink_setcaps (GstBaseSink * bsink, GstCaps * caps)
 
   g_mutex_lock (dfbvideosink->window_lock);
   if (dfbvideosink->keep_ar) {
+#if defined(HAVE_SHMERAM)
     dfbvideosink->require_clear_meram = true;
+#endif
     dfbvideosink->require_clear_surface = dfbvideosink->backbuffer ? 2 : 1;
   }
 #if defined(HAVE_SHVIO)
@@ -3104,9 +3107,11 @@ gst_dfbvideosink_set_property (GObject * object, guint prop_id,
     case ARG_WINDOW_WIDTH:
       ivalue = g_value_get_int (value);
       g_mutex_lock (dfbvideosink->window_lock);
+#if defined(HAVE_SHMERAM)
       dfbvideosink->require_clear_meram = ((ivalue & 0x03)
           || ((dfbvideosink->window.x + ivalue) & 0x03)
           || dfbvideosink->keep_ar);
+#endif
       dfbvideosink->window.w = ivalue;
       dfbvideosink->require_clear_surface = dfbvideosink->backbuffer ? 2 : 1;
       g_mutex_unlock (dfbvideosink->window_lock);
@@ -3120,9 +3125,11 @@ gst_dfbvideosink_set_property (GObject * object, guint prop_id,
     case ARG_WINDOW_X_OFFSET:
       ivalue = g_value_get_int (value);
       g_mutex_lock (dfbvideosink->window_lock);
+#if defined(HAVE_SHMERAM)
       dfbvideosink->require_clear_meram = ((ivalue & 0x03)
           || ((dfbvideosink->window.w + ivalue) & 0x03)
           || dfbvideosink->keep_ar);
+#endif
       dfbvideosink->window.x = ivalue;
       dfbvideosink->require_clear_surface = dfbvideosink->backbuffer ? 2 : 1;
       g_mutex_unlock (dfbvideosink->window_lock);
