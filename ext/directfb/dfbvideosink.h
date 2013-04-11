@@ -145,6 +145,8 @@ struct _GstDfbVideoSink {
   /* object-set pixel aspect ratio */
   GValue *par;
 
+  gint require_clear_surface;
+
 #if defined(HAVE_SHVIO)
   enum {
     SRC = 0,
@@ -152,7 +154,6 @@ struct _GstDfbVideoSink {
   };
 
   gboolean require_clear_meram;
-  gint require_clear_surface;
 
   SHVIO *vio;
   gint rowstride;

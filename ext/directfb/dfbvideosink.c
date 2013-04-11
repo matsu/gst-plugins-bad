@@ -1777,8 +1777,11 @@ gst_dfbvideosink_setcaps (GstBaseSink * bsink, GstCaps * caps)
 {
   GstDfbVideoSink *dfbvideosink;
   GstStructure *structure;
-  gboolean res, interlaced, result = FALSE;
+  gboolean res, result = FALSE;
+#if defined(HAVE_SHVIO)
+  gboolean interlaced;
   const gchar *layout = NULL;
+#endif
   gint video_width, video_height;
   const GValue *framerate;
   DFBSurfacePixelFormat pixel_format = DSPF_UNKNOWN;
