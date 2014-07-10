@@ -1622,7 +1622,7 @@ gst_h264_parse_write_nal_prefix (GstH264Parse * h264parse, GstBuffer * nal)
       while (offset + nal_length <= GST_BUFFER_SIZE (nal)) {
         nalu_size = 0;
         for (i = 0; i < nal_length; i++)
-          nalu_size = (nalu_size << 8) | GST_BUFFER_DATA (nal)[i];
+          nalu_size = (nalu_size << 8) | GST_BUFFER_DATA (nal)[i + offset];
         if (nalu_size > GST_BUFFER_SIZE (nal) - nal_length - offset) {
           GST_WARNING_OBJECT (h264parse, "NAL size %u is larger than buffer, "
               "reducing it to the buffer size: %u", nalu_size,
