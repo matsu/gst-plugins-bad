@@ -2137,12 +2137,12 @@ gst_h264_parse_chain_forward (GstH264Parse * h264parse, gboolean discont,
         case NAL_SPS:
           GST_DEBUG_OBJECT (h264parse, "we have an SPS NAL");
           gst_nal_decode_sps (h264parse, &bs);
-	  is_config_nal = TRUE;
+          is_config_nal = TRUE;
           break;
         case NAL_PPS:
           GST_DEBUG_OBJECT (h264parse, "we have a PPS NAL");
           gst_nal_decode_pps (h264parse, &bs);
-	  is_config_nal = TRUE;
+          is_config_nal = TRUE;
           break;
         case NAL_AU_DELIMITER:
           GST_DEBUG_OBJECT (h264parse, "we have an access unit delimiter.");
