@@ -1931,7 +1931,7 @@ gst_h264_parse_push_nal (GstH264Parse * h264parse, GstBuffer * nal,
     nal = gst_h264_parse_write_nal_prefix (h264parse, nal);
 
     /* start of a picture is a good time to insert codec SPS and PPS */
-    if (G_UNLIKELY (h264parse->codec_nals && h264parse->picture_start)) {
+    if (G_UNLIKELY (h264parse->codec_nals)) {
       while (h264parse->codec_nals) {
         GST_DEBUG_OBJECT (h264parse, "inserting codec_nal of size %d into AU",
             GST_BUFFER_SIZE (h264parse->codec_nals->data));
